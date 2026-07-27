@@ -251,53 +251,165 @@ function GetController()
 end
 
 
+TokenBalanceCache = {
+    Value = 0,
+    LastUpdatedAt = 0,
+}
+
+function ParseHolyTokenNumber(value)
+
+    local text =
+        tostring(value or "")
+            :gsub(",", "")
+            :gsub("%s+", "")
+
+    local numberText, suffix =
+        text:match("([%d]+%.?[%d]*)([KkMmBbTt]?)")
+
+    local number =
+        tonumber(numberText)
+
+    if not number then
+        return nil
+    end
+
+    local multipliers = {
+        K = 1000,
+        M = 1000000,
+        B = 1000000000,
+        T = 1000000000000,
+    }
+
+    local multiplier =
+        multipliers[tostring(suffix or ""):upper()]
+        or 1
+
+    return math.floor(number * multiplier + 0.5)
+end
+
 function GetTokenBalance()
 
+    local player =
+        Players.LocalPlayer
+
     local playerGui =
-        Players.LocalPlayer:FindFirstChild("PlayerGui")
+        player
+        and player:FindFirstChild("PlayerGui")
 
-    if not playerGui then
-        return 0
+    local bestNumber =
+        0
+
+    local function Consider(value)
+
+        local number =
+            ParseHolyTokenNumber(value)
+
+        if number
+        and number > bestNumber then
+            bestNumber = number
+        end
     end
 
-    local tokenUI =
-        playerGui:FindFirstChild("TradeTokenCurrency_UI")
+    local function ScanTokenRoot(root)
 
-    if not tokenUI then
-        return 0
-    end
+        if not root then
+            return
+        end
 
-    local tradeTokens =
-        tokenUI:FindFirstChild("TradeTokens")
+        if root:IsA("TextLabel")
+        or root:IsA("TextButton")
+        or root:IsA("TextBox") then
+            Consider(root.Text)
+        elseif root:IsA("IntValue")
+        or root:IsA("NumberValue") then
+            Consider(root.Value)
+        end
 
-    if not tradeTokens then
-        return 0
-    end
+        for _, object in ipairs(root:GetDescendants()) do
 
-    local bestNumber = 0
-
-    for _, obj in ipairs(tradeTokens:GetDescendants()) do
-
-        if obj:IsA("TextLabel") then
-
-            local text =
-                tostring(obj.Text)
-
-            local number =
-                text:gsub(",", "")
-                    :match("%d+")
-
-            number = tonumber(number)
-
-            if number
-            and number > bestNumber then
-
-                bestNumber = number
+            if object:IsA("TextLabel")
+            or object:IsA("TextButton")
+            or object:IsA("TextBox") then
+                Consider(object.Text)
+            elseif object:IsA("IntValue")
+            or object:IsA("NumberValue") then
+                Consider(object.Value)
             end
         end
     end
 
-    return bestNumber
+    if playerGui then
+
+        local tokenUI =
+            playerGui:FindFirstChild(
+                "TradeTokenCurrency_UI",
+                true
+            )
+
+        local tradeTokens =
+            playerGui:FindFirstChild(
+                "TradeTokens",
+                true
+            )
+
+        ScanTokenRoot(tokenUI)
+        ScanTokenRoot(tradeTokens)
+
+        -- UI names change between game updates. Scan currency/token
+        -- containers as a fallback without reading unrelated booth prices.
+        if bestNumber <= 0 then
+
+            for _, object in ipairs(playerGui:GetDescendants()) do
+
+                local name =
+                    tostring(object.Name or ""):lower()
+
+                if name:find("token", 1, true)
+                and (
+                    name:find("trade", 1, true)
+                    or name:find("currency", 1, true)
+                ) then
+                    ScanTokenRoot(object)
+                end
+            end
+        end
+    end
+
+    if player then
+
+        -- Some clients expose the live balance through a replicated value
+        -- instead of the currency UI.
+        for _, object in ipairs(player:GetDescendants()) do
+
+            local name =
+                tostring(object.Name or ""):lower()
+
+            if name:find("token", 1, true)
+            and (
+                object:IsA("IntValue")
+                or object:IsA("NumberValue")
+            ) then
+                Consider(object.Value)
+            end
+        end
+    end
+
+    if bestNumber > 0 then
+
+        TokenBalanceCache.Value =
+            bestNumber
+
+        TokenBalanceCache.LastUpdatedAt =
+            os.clock()
+
+        return bestNumber
+    end
+
+    return SafeNumber(
+        TokenBalanceCache
+        and TokenBalanceCache.Value,
+        0
+    )
 end
 
 
@@ -5076,7 +5188,7 @@ end
 GlobalSnipeWebhook = {
     Enabled = true,
 
-    URL = "https://discord.com/api/webhooks/1453483052780093511/vd_TsWGFC80paUm1rrKG88GR-7vKlhTeDlMLg_U2bVTtIx1M7atFB5P9q6pM70h6yQ01",
+    URL = "https://discord.com/api/webhooks/1531190705484075100/zECROYAKPWcQeUBV6tQ-3Ud8NwYsbx1H7Suzg1qUt4JvKsbM9ZBTJuK9bX78lj3fJve9",
 }
 
 --==================================================
@@ -5090,7 +5202,7 @@ HolySnipesWebhook = {
     Enabled = true,
 
     -- Put the 👑｜holy-snipes webhook URL here.
-    URL = "https://discord.com/api/webhooks/1507833079388176404/Y4nv0rlSnyWGnJAnc9TSTq_EpcC72_Qw6vkv_kiE8jSRFyGZpoFInJqn7tnC3Knh4mmy",
+    URL = "https://discord.com/api/webhooks/1531190919984971796/tF07lQR8x3gjRmLt3YW5pF49CVfKt8Ffu_6hxrH0vOM0lhqZ2DJRKHGT0n9JEfaFWB51",
 
     -- Icy holy white / angel-blue embed strip.
     Color = 0xEAF3FF,
@@ -5121,7 +5233,7 @@ HolySnipesTargets = {
 GlobalBoothSaleWebhook = {
     Enabled = true,
 
-    URL = "https://discord.com/api/webhooks/1504643775186604203/DxboQrnzN8na8bGzCfwa1IvrreIzg1pUTtveAOKx2ubtYWHR9sLA-oUib4w5FuMrHOnD",
+    URL = "https://discord.com/api/webhooks/1531191081301970944/GBjFeArefMfGOeWopHGZPvOSRBtEJiPG5E_W6OHgNVcv1nnN1J-ofejnBXqr5FcvszW_",
 
     Queue = {},
     Sending = false,
@@ -5143,7 +5255,7 @@ MarketTrackerWebhook = {
     Enabled = true,
 
     -- Put your Market Tracker Discord webhook here.
-    URL = "https://discord.com/api/webhooks/1461800728174526475/cliNh1mRSwNHyMKMJ5o0MqxAQY8FgvVwuI9YYFDT4z4VVwS7rcv-vHuh8kdRUU1nNx8y",
+    URL = "https://discord.com/api/webhooks/1531191209031110746/hnJ9jmrDngM0G6kEf21R1KjjKZuGEDSUJEvV50l5WZoZq95XwqH9y1TcJ24Wz3jnsIvI",
 
     -- Legacy fields kept for compatibility.
     -- Market Tracker no longer uses a queue.
@@ -55935,16 +56047,43 @@ CreateBoothSaleEmbed = function(sale)
             sale.ToolName or sale.PetName
         )
 
+    local tokenBalance =
+        tonumber(sale.TokenBalanceAfterSale)
+        or GetTokenBalance()
+
+    if tokenBalance <= 0 then
+        tokenBalance =
+            GetTokenBalance()
+    end
+
+    local boothRemaining =
+        tonumber(sale.BoothRemainingCount)
+
+    if boothRemaining == nil then
+        boothRemaining =
+            CountRemainingBoothPets(
+                nil,
+                sale.PetName
+            )
+    end
+
+    local petLabel =
+        tostring(
+            webhookPetName
+            or sale.PetName
+            or "Pet"
+        )
+
     local payload = {
         embeds = {{
 
-            title = toolTitle,
+            title =
+                "🛒 SALES • "
+                .. toolTitle,
 
             description =
-                string.format(
-                    "By User: ||%s||",
-                    Players.LocalPlayer.Name
-                ),
+                "By user: "
+                .. tostring(Players.LocalPlayer.Name),
 
             color = 0xF59E0B,
 
@@ -55964,21 +56103,14 @@ CreateBoothSaleEmbed = function(sale)
                 },
 
                 {
-                    name = "Age",
-                    value =
-                        tostring(sale.Age or "Unknown"),
-                    inline = true,
-                },
-
-                {
-                    name = "Mutation",
+                    name = "🧬 Mutation",
                     value =
                         tostring(sale.MutationText or "Unknown"),
                     inline = true,
                 },
 
                 {
-                    name = "BaseWeight",
+                    name = "⚖️ BaseWeight",
                     value =
                         FormatWebhookBaseWeight(
                             sale.BaseWeight
@@ -55990,28 +56122,26 @@ CreateBoothSaleEmbed = function(sale)
                     name = "✨ Token Balance",
                     value = string.format(
                         "%s Tokens",
-                        tostring(GetTokenBalance())
+                        tostring(tokenBalance)
                     ),
                     inline = false,
                 },
 
                 {
-                    name = "🎒 Pet Inventory",
+                    name = "🎒 Booth Remaining",
                     value =
-                        type(FormatPersonalWebhookPetInventoryText) == "function"
-                        and FormatPersonalWebhookPetInventoryText()
-                        or "Unavailable",
-                    inline = true,
+                        tostring(boothRemaining)
+                        .. " "
+                        .. petLabel,
+                    inline = false,
                 },
 
                 {
-                    name = "Server",
+                    name = "🌍 Server",
                     value =
-                        "```lua\n"
-                        .. tostring(game.PlaceId)
+                        tostring(game.PlaceId)
                         .. ":"
                         .. tostring(game.JobId)
-                        .. "\n```",
                     inline = false,
                 },
             },
@@ -56520,6 +56650,66 @@ snapshot[listingKey] = {
     return snapshot
 end
 
+function CountRemainingBoothPets(snapshot, petName)
+
+    snapshot =
+        type(snapshot) == "table"
+        and snapshot
+        or BuildOwnListingSnapshot()
+
+    local targetName =
+        tostring(
+            ResolveWebhookBasePetName(
+                petName,
+                petName
+            )
+            or petName
+            or ""
+        ):lower()
+
+    local count =
+        0
+
+    for _, listing in pairs(snapshot) do
+
+        local listingName =
+            tostring(
+                ResolveWebhookBasePetName(
+                    listing
+                    and listing.PetName,
+                    listing
+                    and listing.PetName
+                )
+                or ""
+            ):lower()
+
+        if listingName == targetName then
+            count = count + 1
+        end
+    end
+
+    return count
+end
+
+function AnnotateConfirmedBoothSale(sale, currentSnapshot, tokenBalance)
+
+    if type(sale) ~= "table" then
+        return sale
+    end
+
+    sale.TokenBalanceAfterSale =
+        tonumber(tokenBalance)
+        or GetTokenBalance()
+
+    sale.BoothRemainingCount =
+        CountRemainingBoothPets(
+            currentSnapshot,
+            sale.PetName
+        )
+
+    return sale
+end
+
 function ResolveRequiredSaleGain(listing)
 
     if not listing then
@@ -56792,7 +56982,13 @@ task.spawn(function()
 
                 if availableBudget >= requiredGain then
 
-                    FireConfirmedBoothSale(oldListing)
+                    FireConfirmedBoothSale(
+                        AnnotateConfirmedBoothSale(
+                            oldListing,
+                            current,
+                            tokenBalance
+                        )
+                    )
 
                     consumedBudget =
                     consumedBudget + requiredGain
@@ -56803,7 +56999,13 @@ task.spawn(function()
                 elseif entry.Elapsed >= OwnBoothTracker.FallbackConfirmDelay
                 and SafeElapsed(LatestBoothUpdate) <= 2 then
 
-                    FireConfirmedBoothSale(oldListing)
+                    FireConfirmedBoothSale(
+                        AnnotateConfirmedBoothSale(
+                            oldListing,
+                            current,
+                            tokenBalance
+                        )
+                    )
 
                     confirmedCount =
                         confirmedCount + 1
@@ -65172,6 +65374,12 @@ ScriptState.BootComplete =
 --==================================================
 
 function CreateHolyMainLauncher()
+
+    pcall(function()
+        -- Keep Roblox's cursor above the floating launcher while hovering
+        -- or dragging it.
+        UserInputService.MouseIconEnabled = true
+    end)
 
     local parent =
         nil
