@@ -1,5 +1,5 @@
 --==================================================
--- HOLY v3.3.7 â€” OBSIDIAN FOUNDATION GROW A GARDEN TRADE MARKET CODING
+-- HOLY v3.3.7 — OBSIDIAN FOUNDATION GROW A GARDEN TRADE MARKET CODING
 -- Purpose: Deterministic, modular base (no features)
 --==================================================
 
@@ -3670,7 +3670,7 @@ function ImportWatchlistsFromText(rawText, mode)
 end
 
 --==================================================
--- LISTING â†’ SNIPER PRICE SYNC
+-- LISTING → SNIPER PRICE SYNC
 -- Uses listing filter prices to update sniper MaxPrice.
 -- Exact pet names only. No prefix/suffix/fuzzy matching.
 --==================================================
@@ -3723,7 +3723,7 @@ function FormatPriceSyncNumber(value)
     end
 
     if number == math.huge then
-        return "âˆž"
+        return "∞"
     end
 
     number =
@@ -3959,7 +3959,7 @@ function BuildSniperPriceSyncPreview(percent)
     local lines = {
         "Price Sync Preview",
         "Percent: " .. tostring(percent) .. "%",
-        "Formula: sniper price = listing price Ã— percent",
+        "Formula: sniper price = listing price × percent",
         "",
     }
 
@@ -4005,7 +4005,7 @@ function BuildSniperPriceSyncPreview(percent)
                     .. tostring(change.PetName)
                     .. ": "
                     .. FormatPriceSyncNumber(change.OldPrice)
-                    .. " â†’ "
+                    .. " → "
                     .. FormatPriceSyncNumber(change.NewPrice)
                     .. " | listing "
                     .. FormatPriceSyncNumber(change.ListingPrice)
@@ -4016,7 +4016,7 @@ function BuildSniperPriceSyncPreview(percent)
 
             table.insert(
                 lines,
-                "â€¦ +"
+                "… +"
                     .. tostring(#changes - maxRows)
                     .. " more changes"
             )
@@ -5092,7 +5092,7 @@ GlobalSnipeWebhook = {
 HolySnipesWebhook = {
     Enabled = true,
 
-    -- Put the ðŸ‘‘ï½œholy-snipes webhook URL here.
+    -- Put the 👑｜holy-snipes webhook URL here.
     URL = "https://discord.com/api/webhooks/1507833079388176404/Y4nv0rlSnyWGnJAnc9TSTq_EpcC72_Qw6vkv_kiE8jSRFyGZpoFInJqn7tnC3Knh4mmy",
 
     -- Icy holy white / angel-blue embed strip.
@@ -5310,12 +5310,12 @@ MarketTrackerTargets = {
 
     ["Ghostly Spider"] = {
         Type = "Rare",
-        Emoji = "ðŸ•·ï¸",
+        Emoji = "🕷️",
 
-        -- <= SnipePrice  = ðŸ”¥ Snipe / bright green / role ping
-        -- <= GoodPrice   = âœ… Good / green
-        -- <= MaxPrice    = âš–ï¸ Fair / yellow
-        -- > MaxPrice     = âŒ Overpriced / red
+        -- <= SnipePrice  = 🔥 Snipe / bright green / role ping
+        -- <= GoodPrice   = ✅ Good / green
+        -- <= MaxPrice    = ⚖️ Fair / yellow
+        -- > MaxPrice     = ❌ Overpriced / red
         MaxPrice = 50000,
         GoodPrice = 30000,
         SnipePrice = 15000,
@@ -5326,7 +5326,7 @@ MarketTrackerTargets = {
 
     ["Rainbow Elephant"] = {
         Type = "Rare",
-        Emoji = "ðŸ˜",
+        Emoji = "🐘",
 
         MaxPrice = 2000000,
         GoodPrice = 500000,
@@ -5338,7 +5338,7 @@ MarketTrackerTargets = {
 
     ["Rainbow Birb"] = {
         Type = "Rare",
-        Emoji = "ðŸ¦",
+        Emoji = "🐦",
 
         MaxPrice = 50000,
         GoodPrice = 40000,
@@ -5350,7 +5350,7 @@ MarketTrackerTargets = {
 
     ["Rainbow Dilophosaurus"] = {
         Type = "Rare",
-        Emoji = "ðŸ¦–",
+        Emoji = "🦖",
 
         MaxPrice = 60000,
         GoodPrice = 30000,
@@ -5362,7 +5362,7 @@ MarketTrackerTargets = {
 
     ["Blue Whale"] = {
         Type = "Rare",
-        Emoji = "ðŸ‹",
+        Emoji = "🐋",
 
         MaxPrice = 50000,
         GoodPrice = 20000,
@@ -5374,7 +5374,7 @@ MarketTrackerTargets = {
 
     ["Albino Peacock"] = {
         Type = "Rare",
-        Emoji = "ðŸ¦š",
+        Emoji = "🦚",
 
         MaxPrice = 50000,
         GoodPrice = 20000,
@@ -5386,7 +5386,7 @@ MarketTrackerTargets = {
 
     ["Giant Scorpion"] = {
         Type = "Rare",
-        Emoji = "ðŸ¦‚",
+        Emoji = "🦂",
 
         MaxPrice = 70000,
         GoodPrice = 50000,
@@ -5398,7 +5398,7 @@ MarketTrackerTargets = {
 
         ["Ghostly Headless Horseman"] = {
         Type = "Rare",
-        Emoji = "ðŸŽƒ",
+        Emoji = "🎃",
 
         MaxPrice = 30000,
         GoodPrice = 20000,
@@ -5410,7 +5410,7 @@ MarketTrackerTargets = {
 
         ["Rainbow Hotdog Daschund"] = {
         Type = "Rare",
-        Emoji = "ðŸ•",
+        Emoji = "🐕",
 
         MaxPrice = 30000,
         GoodPrice = 15000,
@@ -5427,7 +5427,7 @@ MarketTrackerTargets = {
 
     ["Seal"] = {
         Type = "Weight",
-        Emoji = "ðŸ¦­",
+        Emoji = "🦭",
 
         MaxPrice = 25000,
         GoodPrice = 20000,
@@ -5439,7 +5439,7 @@ MarketTrackerTargets = {
 
     ["Mimic Octopus"] = {
         Type = "Weight",
-        Emoji = "ðŸ™",
+        Emoji = "🐙",
 
         MaxPrice = 10000,
         GoodPrice = 6000,
@@ -8294,7 +8294,7 @@ function TryAutoSwitchShowcasePet(missingPetName)
     print(
         "[BoothPet] Auto switched showcase:",
         tostring(oldPet),
-        "â†’",
+        "→",
         tostring(newPet),
         "| listed as:",
         tostring(fallback.ListedPetName or newPet)
@@ -13443,7 +13443,7 @@ local function TransferExtractPositiveTradeValueFromText(text)
 
     -- Ignore cooldowns/timers/buttons/non-value labels.
     if lower:match("^%d+%.?%d*s$")
-    or lower:find("Â¢", 1, true)
+    or lower:find("¢", 1, true)
     or lower:find("add", 1, true)
     or lower:find("accept", 1, true)
     or lower:find("confirm", 1, true)
@@ -15804,7 +15804,7 @@ and not ListingPassesAnySniperPriceWeightFilter(
 end
 
 -- Do not infer Age from BaseWeight/DisplayWeight.
--- Display KG caps around BaseWeight Ã— 11, while broken Age can go above 100
+-- Display KG caps around BaseWeight × 11, while broken Age can go above 100
 -- without adding extra BaseWeight. Trust booth petData Level/Age instead.
 
 
@@ -16397,7 +16397,7 @@ function FormatLatencyGuardPingText()
 
     return "Ping: "
         .. tostring(math.floor(ping + 0.5))
-        .. "ms â€¢ "
+        .. "ms • "
         .. ResolveLatencyGuardPingLabel(ping)
 end
 
@@ -16593,7 +16593,7 @@ function QueuePurchase(listing)
 
         print(
         string.format(
-            "[QUEUE] Added â†’ P%s %s | Queue: %s",
+            "[QUEUE] Added → P%s %s | Queue: %s",
             tostring(
                 ClampSniperPriority(
                     listing.MatchedPriority
@@ -16641,7 +16641,7 @@ function StartPurchaseWorker()
 
             print(
                 string.format(
-                    "[QUEUE] Processing â†’ %s | Remaining: %s",
+                    "[QUEUE] Processing → %s | Remaining: %s",
                     tostring(listing.PetName),
                     tostring(#PurchaseQueue)
                 )
@@ -16663,7 +16663,7 @@ function StartPurchaseWorker()
 
                 warn(
                     string.format(
-                        "[QUEUE] Pending lock â†’ requeue %s",
+                        "[QUEUE] Pending lock → requeue %s",
                         tostring(listing.PetName)
                     )
                 )
@@ -16914,7 +16914,7 @@ function DispatchPurchase(listing)
         if result == "PENDING" then
 
             warn(
-                "[BUY FAST] Pending lock â†’ retry once:",
+                "[BUY FAST] Pending lock → retry once:",
                 tostring(listing.PetName)
             )
 
@@ -18241,7 +18241,7 @@ function ResolveAgeBreakerCurrentDisplayWeight(baseWeight, age, parsedWeight)
         tonumber(parsedWeight)
 
     -- Age Breaker display must show the pet's current visible KG,
-    -- not BaseWeight Ã— 11.
+    -- not BaseWeight × 11.
     if baseWeight
     and age
     and age > 0 then
@@ -18478,7 +18478,7 @@ function BuildAgeBreakerInventoryPets()
 
             -- IMPORTANT:
             -- Do not use ResolveRawPetDataDisplayWeight here.
-            -- That can fall back to BaseWeight Ã— 11.
+            -- That can fall back to BaseWeight × 11.
             -- Age Breaker needs actual current age KG.
             local displayWeight =
                 ResolveAgeBreakerCurrentDisplayWeight(
@@ -19114,11 +19114,11 @@ function CreateAgeBreakerClaimEmbed(beforeSnapshot, afterPet, reason)
     local payload = {
         embeds = {{
             title =
-                "ðŸŒŸ Age Break Complete â€¢ "
+                "🌟 Age Break Complete • "
                 .. tostring(petTitle)
                 .. " ["
                 .. FormatAgeBreakerWebhookAge(beforeAge)
-                .. " â†’ "
+                .. " → "
                 .. FormatAgeBreakerWebhookAge(afterAge)
                 .. "]",
 
@@ -19136,31 +19136,31 @@ function CreateAgeBreakerClaimEmbed(beforeSnapshot, afterPet, reason)
             fields = {
 
                 {
-                    name = "ðŸŽ¯ Target",
+                    name = "🎯 Target",
                     value = tostring(petTitle),
                     inline = false,
                 },
 
                 {
-                    name = "ðŸ“ˆ Age",
+                    name = "📈 Age",
                     value =
                         FormatAgeBreakerWebhookAge(beforeAge)
-                        .. " â†’ "
+                        .. " → "
                         .. FormatAgeBreakerWebhookAge(afterAge),
                     inline = true,
                 },
 
                 {
-                    name = "âš–ï¸ Weight",
+                    name = "⚖️ Weight",
                     value =
                         FormatAgeBreakerWebhookWeight(beforeWeight)
-                        .. " â†’ "
+                        .. " → "
                         .. FormatAgeBreakerWebhookWeight(afterWeight),
                     inline = true,
                 },
 
                 {
-                    name = "ðŸ§¬ Mutation",
+                    name = "🧬 Mutation",
                     value =
                         tostring(
                             afterPet.MutationText
@@ -19178,7 +19178,7 @@ function CreateAgeBreakerClaimEmbed(beforeSnapshot, afterPet, reason)
                 },
 
                 {
-                    name = "ðŸŽšï¸ Goal Level",
+                    name = "🎚️ Goal Level",
                     value =
                         tostring(
                             math.floor(
@@ -19192,14 +19192,14 @@ function CreateAgeBreakerClaimEmbed(beforeSnapshot, afterPet, reason)
                 },
 
                 {
-                    name = "ðŸ§ª Sacrifice Used",
+                    name = "🧪 Sacrifice Used",
                     value =
                         ResolveAgeBreakerWebhookSacrificeText(),
                     inline = false,
                 },
 
                 {
-                    name = "ðŸŽ’ Pet Inventory",
+                    name = "🎒 Pet Inventory",
                     value =
                         type(FormatPersonalWebhookPetInventoryText) == "function"
                         and FormatPersonalWebhookPetInventoryText()
@@ -19208,7 +19208,7 @@ function CreateAgeBreakerClaimEmbed(beforeSnapshot, afterPet, reason)
                 },
 
                 {
-                    name = "ðŸŒ Server",
+                    name = "🌍 Server",
                     value =
                         "```lua\n"
                         .. tostring(game.PlaceId)
@@ -20349,7 +20349,7 @@ function FormatAgeBreakerQueueText()
 
             table.insert(
                 lines,
-                "â€¦ +"
+                "… +"
                     .. tostring(#queue - 5)
                     .. " more"
             )
@@ -20475,7 +20475,7 @@ function FormatAgeBreakerSacrificePoolText()
 
             table.insert(
                 lines,
-                "â€¦ +"
+                "… +"
                     .. tostring(#pool - 5)
                     .. " more"
             )
@@ -20608,7 +20608,7 @@ function FormatAgeBreakerQueuePoolSummary()
         "Sacrifices: "
             .. tostring(poolCount)
             .. " pooled"
-            .. " â€¢ "
+            .. " • "
             .. tostring(matchingCount)
             .. " match active target",
 
@@ -23322,7 +23322,7 @@ function SendGlobalBoothSaleWebhookNow(sale)
                 fields = {
 
                     {
-                        name = "ðŸ’° Sold For",
+                        name = "💰 Sold For",
                         value = string.format(
                             "%s Tokens",
                             tostring(
@@ -23358,7 +23358,7 @@ function SendGlobalBoothSaleWebhookNow(sale)
                     },
 
                     {
-                        name = "âœ¨ Token Balance",
+                        name = "✨ Token Balance",
                         value = string.format(
                             "%s Tokens",
                             tostring(GetTokenBalance())
@@ -23575,7 +23575,7 @@ function GetMarketTrackerTargetConfig(petName)
 
         return {
             Type = "Rare",
-            Emoji = "ðŸ”Ž",
+            Emoji = "🔎",
 
             MaxPrice = nil,
             GoodPrice = nil,
@@ -23847,7 +23847,7 @@ function ResolveMarketTrackerDeal(config, price)
     if type(config) ~= "table" then
 
         return {
-            Text = "ðŸ”Ž Found",
+            Text = "🔎 Found",
             Color = 0x5865F2,
             ShouldPing = false,
         }
@@ -23873,7 +23873,7 @@ function ResolveMarketTrackerDeal(config, price)
     and price <= snipePrice then
 
         return {
-            Text = "ðŸ”¥ Snipe",
+            Text = "🔥 Snipe",
             Color = 0x22C55E,
             ShouldPing = shouldPing,
         }
@@ -23883,7 +23883,7 @@ function ResolveMarketTrackerDeal(config, price)
     and price <= goodPrice then
 
         return {
-            Text = "âœ… Good",
+            Text = "✅ Good",
             Color = 0x16A34A,
             ShouldPing = shouldPing,
         }
@@ -23893,7 +23893,7 @@ function ResolveMarketTrackerDeal(config, price)
     and price <= maxPrice then
 
         return {
-            Text = "âš–ï¸ Fair",
+            Text = "⚖️ Fair",
             Color = 0xFACC15,
             ShouldPing = shouldPing,
         }
@@ -23902,14 +23902,14 @@ function ResolveMarketTrackerDeal(config, price)
     if maxPrice then
 
         return {
-            Text = "âŒ Overpriced",
+            Text = "❌ Overpriced",
             Color = 0xEF4444,
             ShouldPing = shouldPing,
         }
     end
 
     return {
-        Text = "ðŸ”Ž Found",
+        Text = "🔎 Found",
         Color = 0x5865F2,
         ShouldPing = shouldPing,
     }
@@ -24498,7 +24498,7 @@ end
 -- GLOBAL HOLY SNIPES WEBHOOK SEND
 -- Premium public flex card.
 -- Title uses confirmed display Tool data:
--- HOLY SNIPED â€¢ Pet [Age X] [Y KG]
+-- HOLY SNIPED • Pet [Age X] [Y KG]
 --==================================================
 
 function SendHolySnipesWebhookNow(listing, toolName, confirmedPetName, confirmedAge, confirmedWeight, mutationText)
@@ -24529,7 +24529,7 @@ function SendHolySnipesWebhookNow(listing, toolName, confirmedPetName, confirmed
 
     local title =
         string.format(
-            "ðŸ‘‘ HOLY SNIPED â€¢ %s [Age %s] [%s]",
+            "👑 HOLY SNIPED • %s [Age %s] [%s]",
             tostring(confirmedPetName or listing.PetName or "Unknown"),
             tostring(confirmedAge or "Unknown"),
             FormatWebhookWeightKG(confirmedWeight)
@@ -24552,7 +24552,7 @@ function SendHolySnipesWebhookNow(listing, toolName, confirmedPetName, confirmed
     )
 
     local payload = {
-        username = "ðŸ‘‘ HOLY",
+        username = "👑 HOLY",
 
         embeds = {{
 
@@ -24567,7 +24567,7 @@ function SendHolySnipesWebhookNow(listing, toolName, confirmedPetName, confirmed
             fields = {
 
                 {
-                    name = "ðŸ’° Bought For",
+                    name = "💰 Bought For",
                     value =
                         tostring(listing.Price or 0)
                         .. " Tokens",
@@ -24575,14 +24575,14 @@ function SendHolySnipesWebhookNow(listing, toolName, confirmedPetName, confirmed
                 },
 
                 {
-                    name = "ðŸ§¬ Mutation",
+                    name = "🧬 Mutation",
                     value =
                         mutationText,
                     inline = true,
                 },
 
                 {
-                    name = "âš–ï¸ BaseWeight",
+                    name = "⚖️ BaseWeight",
                     value =
                         FormatWebhookBaseWeight(
                             listing.BaseWeight
@@ -25051,7 +25051,7 @@ end
 
         warn(
             string.format(
-                "[BUY FAILED] Insufficient tokens â†’ %s",
+                "[BUY FAILED] Insufficient tokens → %s",
                 tostring(listing.PetName)
             )
         )
@@ -25095,7 +25095,7 @@ end
 
             warn(
                 string.format(
-                    "[BUY PENDING] %s â†’ will retry",
+                    "[BUY PENDING] %s → will retry",
                     tostring(listing.PetName)
                 )
             )
@@ -25125,7 +25125,7 @@ end
 
     print(
         string.format(
-            "[BUY ACCEPTED] Waiting for inventory â†’ %s",
+            "[BUY ACCEPTED] Waiting for inventory → %s",
             tostring(listing.PetName)
         )
     )
@@ -25345,7 +25345,7 @@ else
 
     warn(
         string.format(
-            "[BUY WARNING] Inventory confirmation timeout â†’ %s",
+            "[BUY WARNING] Inventory confirmation timeout → %s",
             tostring(listing.PetName)
         )
     )
@@ -25961,7 +25961,7 @@ end
 
     local selectedServerMessage =
         string.format(
-            "%s/%s players â€¢ max %s â€¢ %s",
+            "%s/%s players • max %s • %s",
             tostring(selected.Playing),
             tostring(selected.MaxPlayers),
             tostring(maxAllowedPlayers),
@@ -27300,38 +27300,38 @@ function FormatHuntingTargetRow(hit)
     end
 
     local icon =
-        "ðŸŽ¯"
+        "🎯"
 
     local status =
         tostring(hit.Status or hit.Source or "Target")
 
     if status == "Good Listing" then
-        icon = "âœ…"
+        icon = "✅"
     elseif status == "Over Filter" then
-        icon = "âš ï¸"
+        icon = "⚠️"
     elseif status == "Backpack" then
-        icon = "ðŸŽ’"
+        icon = "🎒"
     elseif status == "Character" then
-        icon = "ðŸ§"
+        icon = "🧍"
     end
 
     local text =
         icon
         .. " "
         .. ShortenHuntingText(hit.PetName, 18)
-        .. " â€¢ "
+        .. " • "
         .. ShortenHuntingText(hit.OwnerName, 12)
 
     if hit.Price then
         text =
             text
-            .. " â€¢ "
+            .. " • "
             .. FormatTargetPetsHopListingPrice(hit.Listing or hit)
             .. "T"
     else
         text =
             text
-            .. " â€¢ "
+            .. " • "
             .. status
     end
 
@@ -28448,7 +28448,7 @@ for index, row in ipairs(rows) do
 
         table.insert(
             lines,
-            "â€¢ "
+            "• "
                 .. tostring(row.Name)
                 .. " | "
                 .. tostring(row.UserId)
@@ -28458,7 +28458,7 @@ for index, row in ipairs(rows) do
 
         table.insert(
             lines,
-            "â€¦ +"
+            "… +"
                 .. tostring(#rows - maxRows)
                 .. " more"
         )
@@ -29225,7 +29225,7 @@ end
 function CreatePersonalWebhookPetInventoryField()
 
     return {
-        name = "ðŸŽ’ Pet Inventory",
+        name = "🎒 Pet Inventory",
         value = FormatPersonalWebhookPetInventoryText(),
         inline = true,
     }
@@ -31475,7 +31475,7 @@ function StartWorker(name, fn)
 
     print(
         string.format(
-            "[WORKER] Started â†’ %s",
+            "[WORKER] Started → %s",
             tostring(name)
         )
     )
@@ -32230,9 +32230,9 @@ function RefreshAutoFriendHomeLabel()
         or "OFF"
 
     HomeFriendsLabel:SetText(
-        "ðŸ¤ Friends: "
+        "🤝 Friends: "
             .. status
-            .. " â€¢ "
+            .. " • "
             .. tostring(
                 AutoFriendState
                 and AutoFriendState.AcceptedThisSession
@@ -34354,7 +34354,7 @@ LoadAntiAltAvoidList()
 --==================================================
 Window = Library:CreateWindow({
     Title = "HOLY",
-    Footer = "private build â€¢ made by ben",
+    Footer = "private build • made by ben",
     Center = true,
     AutoShow = true,
     ToggleKeybind = Enum.KeyCode.LeftAlt,
@@ -34842,7 +34842,7 @@ function AddGardenModePlaceholder(tab, title, icon)
     end
 
     box:AddLabel(
-        "ðŸŒ± Garden Mode",
+        "🌱 Garden Mode",
         false
     )
 
@@ -34852,7 +34852,7 @@ function AddGardenModePlaceholder(tab, title, icon)
     )
 
     box:AddButton({
-        Text = "ðŸŒ Join Trade World",
+        Text = "🌐 Join Trade World",
         Tooltip = "Teleport to Grow a Garden Trade World.",
         Func = function()
 
@@ -35705,7 +35705,7 @@ if IsGardenWorld() then
 
         AutoAscensionBox =
             Tabs.Events:AddLeftCollapsibleGroupbox(
-                "ðŸŒ± Auto Ascension",
+                "🌱 Auto Ascension",
                 "sparkles",
                 true
             )
@@ -35714,7 +35714,7 @@ if IsGardenWorld() then
 
         AutoAscensionBox =
             Tabs.Events:AddLeftGroupbox(
-                "ðŸŒ± Auto Ascension",
+                "🌱 Auto Ascension",
                 "sparkles"
             )
     end
@@ -35768,7 +35768,7 @@ end)
         AutoAscensionBox:AddToggle(
             "SpamAscension",
             {
-                Text = "ðŸ”´ Spam Ascension",
+                Text = "🔴 Spam Ascension",
                 Tooltip = "Freezes the 3D game view, fires ascension attempts, then auto-unfreezes when done.",
                 Default = false,
             }
@@ -35895,7 +35895,7 @@ function TruncateAgeBreakerHUDText(text, maxLength)
         return text
     end
 
-    return text:sub(1, maxLength - 1) .. "â€¦"
+    return text:sub(1, maxLength - 1) .. "…"
 end
 
 function FormatAgeBreakerHUDTimer(seconds)
@@ -36135,7 +36135,7 @@ function ResolveAgeBreakerHUDTargetInfo()
     end
 
     if petName == "" then
-        return "No active target", "Age -- â†’ " .. tostring(goalAge or "?")
+        return "No active target", "Age -- → " .. tostring(goalAge or "?")
     end
 
     local targetName =
@@ -36145,7 +36145,7 @@ function ResolveAgeBreakerHUDTargetInfo()
     local ageLine =
         "Age "
         .. tostring(currentAge or "?")
-        .. " â†’ "
+        .. " → "
         .. tostring(goalAge or "?")
 
     return TruncateAgeBreakerHUDText(
@@ -36724,7 +36724,7 @@ function CreateAgeBreakerHUD()
         Enum.Font.GothamBold
 
     title.Text =
-        "â ¿ ðŸ§¬ Age Breaker"
+        "• 🧬 Age Breaker"
 
     title.TextColor3 =
         Color3.fromRGB(245, 240, 255)
@@ -36957,7 +36957,7 @@ function CreateAgeBreakerHUD()
         Enum.Font.GothamBold
 
     targetTitle.Text =
-        "ðŸŽ¯ Target"
+        "🎯 Target"
 
     targetTitle.TextColor3 =
         Color3.fromRGB(180, 190, 255)
@@ -37032,7 +37032,7 @@ function CreateAgeBreakerHUD()
         Enum.Font.GothamMedium
 
     targetAge.Text =
-        "Age -- â†’ ?"
+        "Age -- → ?"
 
     targetAge.TextColor3 =
         Color3.fromRGB(170, 174, 192)
@@ -37072,7 +37072,7 @@ function CreateAgeBreakerHUD()
         Enum.Font.GothamSemibold
 
     pool.Text =
-        "ðŸ§ª Pool: 0"
+        "🧪 Pool: 0"
 
     pool.TextColor3 =
         Color3.fromRGB(215, 218, 230)
@@ -37111,7 +37111,7 @@ function CreateAgeBreakerHUD()
         Enum.Font.GothamSemibold
 
     nextLabel.Text =
-        "ðŸŒ Next: Waiting"
+        "🌍 Next: Waiting"
 
     nextLabel.TextColor3 =
         Color3.fromRGB(215, 218, 230)
@@ -37225,12 +37225,12 @@ function RefreshAgeBreakerHUD()
 
     SetAgeBreakerHUDLabel(
         AgeBreakerHUDPoolLabel,
-        "ðŸ§ª Pool: " .. tostring(sacrifices) .. " left"
+        "🧪 Pool: " .. tostring(sacrifices) .. " left"
     )
 
     SetAgeBreakerHUDLabel(
         AgeBreakerHUDNextLabel,
-        "ðŸŒ Next: " .. ResolveAgeBreakerHUDNextText()
+        "🌍 Next: " .. ResolveAgeBreakerHUDNextText()
     )
 end
 
@@ -37263,7 +37263,7 @@ local ManualJoinHUDToggle =
     VisualBox:AddToggle(
         "ManualJoinHUD",
         {
-            Text = "ðŸ§­ Manual Join HUD",
+            Text = "🧭 Manual Join HUD",
             Default = false,
             Tooltip = "Shows a small floating join box for Grow a Garden or Trade World servers.",
         }
@@ -37317,7 +37317,7 @@ local WatchlistHUDToggle =
     VisualBox:AddToggle(
         "WatchlistHUD",
         {
-            Text = "ðŸ”« Sniper Watchlist HUD",
+            Text = "🔫 Sniper Watchlist HUD",
             Default = false,
         }
     )
@@ -37394,7 +37394,7 @@ local ServerInfoHUDToggle =
     VisualBox:AddToggle(
         "ServerInfoHUD",
         {
-            Text = "ðŸ–¥ï¸ Server Info HUD",
+            Text = "🖥️ Server Info HUD",
             Default = false,
         }
     )
@@ -37426,7 +37426,7 @@ local SniperMonitorHUDToggle =
     VisualBox:AddToggle(
         "SniperMonitorHUD",
         {
-            Text = "ðŸŽ¯ Sniper Monitor HUD",
+            Text = "🎯 Sniper Monitor HUD",
             Default = false,
         }
     )
@@ -37460,7 +37460,7 @@ local AgeBreakerHUDToggle =
     VisualBox:AddToggle(
         "AgeBreakerHUD",
         {
-            Text = "ðŸ§¬ Age Breaker HUD",
+            Text = "🧬 Age Breaker HUD",
             Default = false,
             Tooltip = "Shows Age Breaker timer, target progress, sacrifices left, and next action on-screen.",
         }
@@ -37626,7 +37626,7 @@ CreateWatchlistHUD = function()
         Enum.Font.GothamBold
 
     underline.Text =
-        "â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”"
+        "━━━━━━━━━━━━━━━━━━━━"
 
     underline.TextSize =
         9
@@ -38085,7 +38085,7 @@ if ServerInfoPlayersLabel then
     ServerInfoPlayersLabel.Text =
         "Players: "
         .. ResolveServerPlayersText()
-        .. " â€¢ JobId: "
+        .. " • JobId: "
         .. ResolveShortJobId()
 end
 
@@ -38591,7 +38591,7 @@ RefreshSniperMonitorHUD = function()
                 tostring(ResolveAdaptiveBuyWait()) .. "s",
                 "#FFFFFF"
             )
-            .. " â€¢ "
+            .. " • "
             .. ColorText(
                 modeText,
                 LatencyGuard
@@ -38672,43 +38672,43 @@ end
 
 HomePetInventoryLabel =
     DetailsBox:AddLabel(
-        "ðŸ“¦ Pet Inventory: checking...",
+        "📦 Pet Inventory: checking...",
         false
     )
 
 HomeSnipesSessionLabel =
     DetailsBox:AddLabel(
-        "ðŸŽ¯ Snipes This Session: 0",
+        "🎯 Snipes This Session: 0",
         false
     )
 
 HomePlayersLabel =
     DetailsBox:AddLabel(
-        "ðŸ‘¥ Players: checking...",
+        "👥 Players: checking...",
         false
     )
 
 HomeActiveBoothsLabel =
     DetailsBox:AddLabel(
-        "ðŸª Active Booths: checking...",
+        "🏪 Active Booths: checking...",
         false
     )
 
 HomeSessionLabel =
     DetailsBox:AddLabel(
-        "â±ï¸ Session: 0m 00s",
+        "⏱️ Session: 0m 00s",
         false
     )
 
 HomeInventorySafetyLabel =
     DetailsBox:AddLabel(
-        "ðŸ›¡ï¸ Inventory Safety: checking...",
+        "🛡️ Inventory Safety: checking...",
         false
     )
 
 HomeFriendsLabel =
     DetailsBox:AddLabel(
-        "ðŸ¤ Friends: OFF â€¢ 0 accepted",
+        "🤝 Friends: OFF • 0 accepted",
         false
     )
 
@@ -38786,14 +38786,14 @@ RefreshHomeDetails = function()
 
     if HomePetInventoryLabel then
         HomePetInventoryLabel:SetText(
-            "ðŸ“¦ Pet Inventory: "
+            "📦 Pet Inventory: "
             .. tostring(currentPets)
         )
     end
 
     if HomeSnipesSessionLabel then
         HomeSnipesSessionLabel:SetText(
-            "ðŸŽ¯ Snipes This Session: "
+            "🎯 Snipes This Session: "
             .. tostring(
                 math.floor(
                     SafeNumber(
@@ -38816,7 +38816,7 @@ RefreshHomeDetails = function()
             or 0
 
         local playersText =
-            "ðŸ‘¥ Players: "
+            "👥 Players: "
             .. tostring(currentPlayers)
 
         if maxPlayers > 0 then
@@ -38833,14 +38833,14 @@ RefreshHomeDetails = function()
 
     if HomeActiveBoothsLabel then
         HomeActiveBoothsLabel:SetText(
-            "ðŸª Active Booths: "
+            "🏪 Active Booths: "
             .. tostring(CountHomeActiveBooths())
         )
     end
 
     if HomeSessionLabel then
         HomeSessionLabel:SetText(
-            "â±ï¸ Session: "
+            "⏱️ Session: "
             .. FormatHomeSessionDuration(
                 SafeElapsed(ServerInfoStartedAt)
             )
@@ -38879,7 +38879,7 @@ RefreshHomeDetails = function()
                 or 0
 
             local safetyText =
-                "ðŸ›¡ï¸ Inventory Safety: "
+                "🛡️ Inventory Safety: "
 
             if maxPets <= 0 then
 
@@ -38898,7 +38898,7 @@ RefreshHomeDetails = function()
 
                 safetyText =
                     safetyText
-                    .. "Safe â€¢ "
+                    .. "Safe • "
                     .. tostring(remaining)
                     .. " slots left"
             end
@@ -38976,12 +38976,12 @@ end
 --==================================================
 
 local GatewayStatus = GatewayBox:AddLabel(
-    "Gateway â€¢ Idle"
+    "Gateway • Idle"
 )
 
 local function SetGatewayStatus(text)
     GatewayStatus:SetText(
-        "Gateway â€¢ " .. tostring(text)
+        "Gateway • " .. tostring(text)
     )
 end
 
@@ -39231,7 +39231,7 @@ GatewayInput:OnChanged(function(text)
     if parsed.Mode == "PrivateLink" then
 
         SetGatewayStatus(
-            "Private link detected â€¢ "
+            "Private link detected • "
             .. tostring(placeName)
         )
 
@@ -39241,7 +39241,7 @@ GatewayInput:OnChanged(function(text)
     if parsed.Mode == "PublicInstance" then
 
         SetGatewayStatus(
-            "Valid server â€¢ "
+            "Valid server • "
             .. tostring(placeName)
         )
 
@@ -39428,7 +39428,7 @@ local function JoinParsedServer(parsed)
             parsed.Code
 
         SetGatewayStatus(
-            "Private link copied â€¢ "
+            "Private link copied • "
             .. tostring(placeName)
         )
 
@@ -39715,7 +39715,7 @@ local function RefreshManualJoinHUDValidation()
     if parsed.Mode == "PrivateLink" then
 
         SetManualJoinHUDStatus(
-            "Private link detected â€¢ "
+            "Private link detected • "
             .. tostring(placeName),
             "Warn"
         )
@@ -39726,7 +39726,7 @@ local function RefreshManualJoinHUDValidation()
     if parsed.Mode == "PublicInstance" then
 
         SetManualJoinHUDStatus(
-            "Ready â€¢ "
+            "Ready • "
             .. tostring(placeName),
             "Good"
         )
@@ -39897,7 +39897,7 @@ local function CreateManualJoinHUD()
         Enum.Font.GothamBold
 
     title.Text =
-        "ðŸ§­ Manual Join"
+        "🧭 Manual Join"
 
     title.TextColor3 =
         Color3.fromRGB(255, 235, 170)
@@ -40345,7 +40345,7 @@ end
 --==================================================
 
 GatewayBox:AddButton({
-    Text = "ðŸ“Ž Copy Current Server",
+    Text = "📎 Copy Current Server",
     Func = function()
         if ScriptState.ForceStopped then
             SetGatewayStatus(
@@ -40377,7 +40377,7 @@ GatewayBox:AddButton({
 })
 
 GatewayBox:AddButton({
-    Text = "â†º Reconnect Last Server",
+    Text = "↺ Reconnect Last Server",
     Func = function()
         if ScriptState.ForceStopped then
             SetGatewayStatus(
@@ -40405,7 +40405,7 @@ end
 })
 
 GatewayBox:AddButton({
-    Text = "ðŸšª Connect",
+    Text = "🚪 Connect",
     Tooltip = "Join target server instance",
     Func = function()
         if ScriptState.ForceStopped then
@@ -40511,9 +40511,9 @@ local function RefreshAntiAltStatusLabel()
             and "enabled"
             or "disabled"
         )
-        .. " â€¢ users "
+        .. " • users "
         .. tostring(userCount)
-        .. " â€¢ blocked servers "
+        .. " • blocked servers "
         .. tostring(serverCount)
 
     if lastName
@@ -40566,7 +40566,7 @@ local AntiAltToggle =
     AntiAltBox:AddToggle(
         "AntiAltEnabled",
         {
-            Text = "ðŸ›¡ï¸ Enable Anti Alt",
+            Text = "🛡️ Enable Anti Alt",
             Default = false,
             Tooltip = "Checks the current server for avoided users and hops away when detected.",
         }
@@ -40600,7 +40600,7 @@ local AntiAltImmediateHopToggle =
     AntiAltBox:AddToggle(
         "AntiAltImmediateHop",
         {
-            Text = "ðŸš€ Hop If Detected",
+            Text = "🚀 Hop If Detected",
             Default = true,
             Tooltip = "If an avoided user is in the server, HOLY will hop when no buy is active.",
         }
@@ -40619,7 +40619,7 @@ AntiAltImmediateHopToggle:OnChanged(function(v)
 end)
 
 AntiAltBox:AddButton({
-    Text = "âž• Add To Avoid List",
+    Text = "➕ Add To Avoid List",
     Tooltip = "Adds the typed UserId/username to the saved avoid-list. Usernames are converted to UserIds once.",
 
     Func = function()
@@ -40670,7 +40670,7 @@ AntiAltBox:AddButton({
 })
 
 AntiAltBox:AddButton({
-    Text = "âž– Remove Typed User",
+    Text = "➖ Remove Typed User",
     Tooltip = "Removes the typed UserId/username from the saved avoid-list.",
 
     Func = function()
@@ -40715,7 +40715,7 @@ AntiAltBox:AddButton({
 })
 
 AntiAltBox:AddButton({
-    Text = "ðŸ§ª Check Current Server",
+    Text = "🧪 Check Current Server",
     Tooltip = "Manually checks if an avoided user is in this server.",
 
     Func = function()
@@ -40762,7 +40762,7 @@ AntiAltBox:AddButton({
 })
 
 AntiAltBox:AddButton({
-    Text = "ðŸ§¹ Clear Avoid List",
+    Text = "🧹 Clear Avoid List",
     Tooltip = "Clears all saved avoided users. This does not clear blocked server JobIds.",
 
     Func = function()
@@ -40781,7 +40781,7 @@ AntiAltBox:AddButton({
 })
 
 AntiAltBox:AddButton({
-    Text = "ðŸ§¹ Clear Blocked Servers",
+    Text = "🧹 Clear Blocked Servers",
     Tooltip = "Clears JobIds that were blocked after detecting avoided users.",
 
     Func = function()
@@ -40819,12 +40819,12 @@ if not IsTradeWorld() then
     })
 
     HomeBox:AddLabel(
-        "ðŸŒ± Trade World automation is disabled here.",
+        "🌱 Trade World automation is disabled here.",
         true
     )
 
     HomeBox:AddButton({
-        Text = "ðŸŒ Join Trade World",
+        Text = "🌐 Join Trade World",
         Tooltip = "Teleport to Grow a Garden Trade World.",
         Func = function()
 
@@ -40844,7 +40844,7 @@ local StartToggle =
     HomeBox:AddToggle(
         "StartSystem",
         {
-            Text = "âš¡ Activate Sniper",
+            Text = "⚡ Activate Sniper",
             Default = false,
         }
     )
@@ -40897,7 +40897,7 @@ local SniperDryRunToggle =
     HomeBox:AddToggle(
         "SniperDryRun",
         {
-            Text = "ðŸ§ª Dry Run",
+            Text = "🧪 Dry Run",
             Tooltip = "Test mode. HOLY scans and prints matching pets, but will not buy anything.",
             Default = SniperState.DryRun == true,
         }
@@ -40945,7 +40945,7 @@ local SniperAutoHopToggle =
     HomeBox:AddToggle(
         "SniperAutoHop",
         {
-            Text = "ðŸš€ Sniper Auto Hop",
+            Text = "🚀 Sniper Auto Hop",
             Default = false,
         }
     )
@@ -41015,7 +41015,7 @@ local SmartScannerToggle =
     HomeBox:AddToggle(
         "SmartScannerEnabled",
         {
-            Text = "ðŸ§  Smart Scanner",
+            Text = "🧠 Smart Scanner",
             Default = SniperState.SmartScannerEnabled == true,
             Tooltip = "Experimental efficient scanner. Skips repeated unchanged listings, focuses new/changed listings, and buys the best match first. OFF = classic stable scanner.",
         }
@@ -41064,7 +41064,7 @@ local FilteredPetScannerToggle =
     HomeBox:AddToggle(
         "FilteredPetScanner",
         {
-            Text = "ðŸ” Filtered Pet Scanner",
+            Text = "🔍 Filtered Pet Scanner",
             Default = SniperState.FilteredPetScanner == true,
             Tooltip = "Skips booth pets whose base pet name is not in your sniper watchlists. Best for laggy 500-700 pet servers.",
         }
@@ -41121,7 +41121,7 @@ local ExactFilterScannerToggle =
     HomeBox:AddToggle(
         "ExactFilterScanner",
         {
-            Text = "ðŸ’Ž Exact Filter Scanner",
+            Text = "💎 Exact Filter Scanner",
             Default = SniperState.ExactFilterScanner == true,
             Tooltip = "Only keeps listings that pass sniper pet name, max price, and min weight rules before deeper scanning.",
         }
@@ -41168,7 +41168,7 @@ local FavoriteWatchToggle =
     HomeBox:AddToggle(
         "WatchFavoritedFilterMatches",
         {
-            Text = "â¤ï¸ Watch Favorited Matches",
+            Text = "❤️ Watch Favorited Matches",
             Default = SniperState.WatchFavoritedFilterMatches == true,
             Tooltip = "Watches favorited pets that match your sniper filters. If seller unfavorites later, HOLY can snipe it.",
         }
@@ -41344,15 +41344,15 @@ for index = 1, 5 do
 
                 local detail =
                     tostring(hit.PetName or "Unknown")
-                    .. " â€¢ "
+                    .. " • "
                     .. tostring(hit.OwnerName or "Unknown")
-                    .. " â€¢ "
+                    .. " • "
                     .. tostring(hit.Status or hit.Source or "Target")
 
                 if hit.Price then
                     detail =
                         detail
-                        .. " â€¢ "
+                        .. " • "
                         .. FormatTargetPetsHopListingPrice(hit.Listing or hit)
                         .. "T"
                 end
@@ -41611,7 +41611,7 @@ function RefreshHuntingStatusPanel()
 
         selectedText =
             selectedText
-            .. " â€¢ "
+            .. " • "
             .. table.concat(preview, ", ")
 
         if #targets > 2 then
@@ -41638,9 +41638,9 @@ function RefreshHuntingStatusPanel()
         foundCount > 0
         and (
             tostring(SafeNumber(state.LastBackpackCount, 0))
-            .. " backpack â€¢ "
+            .. " backpack • "
             .. tostring(SafeNumber(state.LastGoodListingCount, 0))
-            .. " good â€¢ "
+            .. " good • "
             .. tostring(SafeNumber(state.LastBadListingCount, 0))
             .. " bad"
         )
@@ -41670,7 +41670,7 @@ function RefreshHuntingStatusPanel()
     if state.SellerAfkCheck == true then
 
         afkText =
-            "On â€¢ "
+            "On • "
             .. tostring(
                 math.floor(
                     SafeNumber(
@@ -41686,7 +41686,7 @@ function RefreshHuntingStatusPanel()
 
             afkText =
                 afkText
-                .. " â€¢ skipped "
+                .. " • skipped "
                 .. tostring(state.LastAfkSkippedPlayer)
         end
     else
@@ -41766,7 +41766,7 @@ local TargetPetsHopToggle =
     HuntingTargetBox:AddToggle(
         "TargetPetsHop",
         {
-            Text = "âš¡ Target Pets Hop",
+            Text = "⚡ Target Pets Hop",
             Default =
                 TargetPetsHopState
                 and TargetPetsHopState.Enabled == true
@@ -43429,7 +43429,7 @@ function TeleportToOwnedBooth()
         if data and data.Booths then
             for _, booth in pairs(data.Booths) do
                 if booth.Owner and tostring(booth.Owner):find(playerId) then
-                    print("[Booth] Ownership confirmed â†’ teleporting")
+                    print("[Booth] Ownership confirmed → teleporting")
 
 
 
@@ -46061,8 +46061,8 @@ function FormatOwnBoothListedPetLine(index, item)
     local icon =
         age
         and age >= 100
-        and "â˜…"
-        or "â€¢"
+        and "★"
+        or "•"
 
     return string.format(
     "%s %-30s %9s %7s",
@@ -48128,10 +48128,10 @@ function FormatListingMutationDisplay(value)
         )
 
     if mutation == "---" then
-        return "ðŸ§¬ Any"
+        return "🧬 Any"
     end
 
-    return "ðŸ§¬ " .. tostring(mutation)
+    return "🧬 " .. tostring(mutation)
 end
 
 function FormatListingFilterLine(index, filter)
@@ -48202,7 +48202,7 @@ function FormatListingFilterLine(index, filter)
             return text
         end
 
-        return text:sub(1, maxLength - 1) .. "â€¦"
+        return text:sub(1, maxLength - 1) .. "…"
     end
 
     local mutation =
@@ -48990,7 +48990,7 @@ function QueueListingPet(pet, filter)
 
     print(
         string.format(
-            "[LISTINGS QUEUE] Added â†’ %s | %s tokens | Queue: %s",
+            "[LISTINGS QUEUE] Added → %s | %s tokens | Queue: %s",
             tostring(pet.ToolName),
             tostring(pet.ListingPrice),
             tostring(#ListingsState.ListingQueue)
@@ -49926,7 +49926,7 @@ ListingsState.PreserveVisualTagsOnNextDisable =
     end
 end
 --==================================================
--- BOOTH TAB â†’ AUTOMATION (UI ONLY)
+-- BOOTH TAB → AUTOMATION (UI ONLY)
 --==================================================
 function BuildBoothTab()
 
@@ -49947,14 +49947,14 @@ if canLeftCollapse then
 
     BoothBox =
         Tabs.Booth:AddLeftCollapsibleGroupbox(
-            "âš¡ Booth Automation",
+            "⚡ Booth Automation",
             "zap",
             true
         )
 
     BoothServerBox =
         Tabs.Booth:AddLeftCollapsibleGroupbox(
-            "ðŸŒ Server Cycle",
+            "🌍 Server Cycle",
             "server",
             false
         )
@@ -49965,13 +49965,13 @@ else
 
     BoothBox =
         Tabs.Booth:AddLeftGroupbox(
-            "âš¡ Booth Automation",
+            "⚡ Booth Automation",
             "zap"
         )
 
     BoothServerBox =
         Tabs.Booth:AddLeftGroupbox(
-            "ðŸŒ Server Cycle",
+            "🌍 Server Cycle",
             "server"
         )
 end
@@ -49980,14 +49980,14 @@ if canRightCollapse then
 
     BoothCustomizationBox =
         Tabs.Booth:AddRightCollapsibleGroupbox(
-            "ðŸŽ¨ Booth Showcase",
+            "🎨 Booth Showcase",
             "wand",
             true
         )
 
     BoothPromoteBox =
         Tabs.Booth:AddRightCollapsibleGroupbox(
-            "ðŸ’¬ Booth Promote",
+            "💬 Booth Promote",
             "message-circle",
             false
         )
@@ -49998,19 +49998,19 @@ else
 
     BoothCustomizationBox =
         Tabs.Booth:AddRightGroupbox(
-            "ðŸŽ¨ Booth Showcase",
+            "🎨 Booth Showcase",
             "wand"
         )
 
     BoothPromoteBox =
         Tabs.Booth:AddRightGroupbox(
-            "ðŸ’¬ Booth Promote",
+            "💬 Booth Promote",
             "message-circle"
         )
 end
 
 local AutoClaimToggle = BoothBox:AddToggle("AutoClaimBooth", {
-    Text = "ðŸŽª Auto Claim Booth",
+    Text = "🎪 Auto Claim Booth",
     Default = false,
 })
 
@@ -50040,7 +50040,7 @@ local SmartReclaimToggle =
     BoothBox:AddToggle(
         "SmartReclaimCloserBooth",
         {
-            Text = "ðŸŽ¯ Smart Reclaim Better Booth",
+            Text = "🎯 Smart Reclaim Better Booth",
             Tooltip = "If HOLY claims a booth too far from middle, it unclaims and claims a closer free booth if available.",
             Default = BoothAuto.SmartReclaimCloserBooth == true,
         }
@@ -50140,7 +50140,7 @@ local EquipPetToggle =
     BoothCustomizationBox:AddToggle(
         "EquipPet",
         {
-            Text = "ðŸŽ­ Enable Showcase",
+            Text = "🎭 Enable Showcase",
             Tooltip = "Equips only the listed pets you selected below.",
             Default = BoothPetState.Enabled == true,
         }
@@ -50206,7 +50206,7 @@ local ShowcaseRotationToggle =
     BoothCustomizationBox:AddToggle(
         "ShowcaseRotationEnabled",
         {
-            Text = "ðŸ” Rotate Pets",
+            Text = "🔁 Rotate Pets",
             Tooltip = "Rotates only between the pets selected in the dropdown.",
             Default = BoothPetState.RotationEnabled == true,
         }
@@ -50512,7 +50512,7 @@ BoothSkinDropdown:OnChanged(function(value)
 end)
 
 local AutoTpToggle = BoothBox:AddToggle("AutoTpBooth", {
-    Text = "ðŸ“ Auto Teleport Booth",
+    Text = "📍 Auto Teleport Booth",
     Tooltip = "Teleports back only after you move too far from your booth.",
     Default = false,
 })
@@ -50553,7 +50553,7 @@ AutoTpToggle:OnChanged(function(enabled)
 end)
 
 local LockBehindBoothToggle = BoothBox:AddToggle("LockBehindBooth", {
-    Text = "ðŸ”’ Lock Behind Booth",
+    Text = "🔒 Lock Behind Booth",
     Tooltip = "Hard-locks your character behind your booth. Requires Auto Teleport Booth.",
     Default = false,
 })
@@ -50662,7 +50662,7 @@ end)
 BoothPromoteBox:AddDropdown(
     "PromoteSource",
     {
-        Text = "ðŸŽ¯ Promote Source",
+        Text = "🎯 Promote Source",
 
         Values = {
             "Best Listed Pet",
@@ -50691,7 +50691,7 @@ end)
 BoothPromoteBox:AddDropdown(
     "PromoteMode",
     {
-        Text = "ðŸ” Promote Mode",
+        Text = "🔁 Promote Mode",
 
         Values = {
             "Built-in Rotation",
@@ -50717,7 +50717,7 @@ end)
 BoothPromoteBox:AddInput(
     "PromoteInterval",
     {
-        Text = "â±ï¸ Promote Delay",
+        Text = "⏱️ Promote Delay",
         Default = tostring(BoothAuto.PromoteInterval or 40),
         Numeric = true,
         Finished = true,
@@ -50746,7 +50746,7 @@ end)
 BoothPromoteBox:AddInput(
     "CustomPromoteCount",
     {
-        Text = "ðŸ’¬ Message Count",
+        Text = "💬 Message Count",
         Default = tostring(BoothAuto.CustomPromoteCount or 4),
         Numeric = true,
         Finished = true,
@@ -50835,7 +50835,7 @@ for index = 1, 10 do
         BoothPromoteBox:AddInput(
             "CustomPromoteMessage" .. tostring(index),
             {
-                Text = "ðŸ’¬ Custom Message " .. tostring(index),
+                Text = "💬 Custom Message " .. tostring(index),
                 Default = tostring(defaultMessage or ""),
                 Finished = true,
                 ClearTextOnFocus = false,
@@ -50856,7 +50856,7 @@ for index = 1, 10 do
 end
 
 BoothPromoteBox:AddLabel(
-    "âœ¨ Placeholders: %pet%  %mut%  %kg%  %price%"
+    "✨ Placeholders: %pet%  %mut%  %kg%  %price%"
 )
 
 RefreshCustomPromoteMessageInputs()
@@ -50914,7 +50914,7 @@ do
     EventsBox:AddToggle(
         "AutoBuyBeeEgg",
         {
-            Text = "ðŸ Auto Buy Bee Eggs",
+            Text = "🐝 Auto Buy Bee Eggs",
             Tooltip = "Buys selected Bee Eggs from Trade World",
             Default = false,
         }
@@ -51774,7 +51774,7 @@ end
 
 --------------------------------------------------
 local AutoHopToggle = BoothServerBox:AddToggle("AutoServerHop", {
-    Text = "ðŸŒ Join New Server",
+    Text = "🌍 Join New Server",
     Tooltip = "Joins new server every X min",
     Default = false,
 })
@@ -51790,7 +51790,7 @@ AutoHopToggle:OnChanged(function(enabled)
 end)
 
 local HopMinutesInput = BoothServerBox:AddInput("HopMinutes", {
-    Text = "âŒ› Minutes",
+    Text = "⌛ Minutes",
     Default = "10",
     Numeric = true,
     Finished = true,
@@ -51814,7 +51814,7 @@ local AddHopTimeAfterSaleToggle =
     BoothServerBox:AddToggle(
         "AddHopTimeAfterSale",
         {
-            Text = "â±ï¸ Add Hop Time After Sale",
+            Text = "⏱️ Add Hop Time After Sale",
             Tooltip = "Adds extra time before server hopping when someone buys from your booth.",
             Default = true,
         }
@@ -51842,7 +51842,7 @@ local HopTimeAfterSaleInput =
     BoothServerBox:AddInput(
         "HopTimeAfterSaleMinutes",
         {
-            Text = "â³ Extra Sale Minutes",
+            Text = "⏳ Extra Sale Minutes",
             Default = "1",
             Numeric = true,
             Finished = true,
@@ -51881,7 +51881,7 @@ local StackSaleTimeToggle =
     BoothServerBox:AddToggle(
         "StackSaleTime",
         {
-            Text = "âž• Stack Sale Time",
+            Text = "➕ Stack Sale Time",
             Tooltip = "If enabled, every sale adds more time. If disabled, each sale refreshes the timer.",
             Default = false,
         }
@@ -52001,7 +52001,7 @@ RefreshWatchlist = nil
 --==================================================
 -- SERVER TAB
 -- Server selection, hop behavior, and bad-server memory.
--- This replaces the old Sniper â†’ Server sub-tab.
+-- This replaces the old Sniper → Server sub-tab.
 --==================================================
 
 function BuildServerTab()
@@ -52014,14 +52014,14 @@ function BuildServerTab()
 
         ServerSelectionBox =
             Tabs.Server:AddLeftCollapsibleGroupbox(
-                "ðŸŒ Server Selection",
+                "🌐 Server Selection",
                 "server",
                 true
             )
 
         ServerMemoryBox =
             Tabs.Server:AddLeftCollapsibleGroupbox(
-                "ðŸ§  Server Memory",
+                "🧠 Server Memory",
                 "brain",
                 true
             )
@@ -52030,13 +52030,13 @@ function BuildServerTab()
 
         ServerSelectionBox =
             Tabs.Server:AddLeftGroupbox(
-                "ðŸŒ Server Selection",
+                "🌐 Server Selection",
                 "server"
             )
 
         ServerMemoryBox =
             Tabs.Server:AddLeftGroupbox(
-                "ðŸ§  Server Memory",
+                "🧠 Server Memory",
                 "brain"
             )
     end
@@ -52045,7 +52045,7 @@ function BuildServerTab()
 
         ServerInfoBox =
             Tabs.Server:AddRightCollapsibleGroupbox(
-                "ðŸ“¡ Current Server",
+                "📡 Current Server",
                 "info",
                 true
             )
@@ -52054,7 +52054,7 @@ function BuildServerTab()
 
         ServerInfoBox =
             Tabs.Server:AddRightGroupbox(
-                "ðŸ“¡ Current Server",
+                "📡 Current Server",
                 "info"
             )
     end
@@ -52069,7 +52069,7 @@ function BuildServerTab()
         ServerSelectionBox:AddInput(
             "SniperMaxServerPlayers",
             {
-                Text = "ðŸ‘¥ Max Server Players",
+                Text = "👥 Max Server Players",
                 Default = tostring(SniperState.MaxServerPlayers),
                 Numeric = true,
                 Finished = true,
@@ -52104,7 +52104,7 @@ function BuildServerTab()
         ServerSelectionBox:AddDropdown(
             "SniperServerHopMode",
             {
-                Text = "â‡„ Server Hop Mode",
+                Text = "⇄ Server Hop Mode",
                 Values = {
                     "Fullest Under Max",
                     "Balanced",
@@ -52132,7 +52132,7 @@ function BuildServerTab()
         ServerSelectionBox:AddInput(
             "SniperServerHopPages",
             {
-                Text = "ðŸ“„ Server Hop Pages",
+                Text = "📄 Server Hop Pages",
                 Tooltip = "How many Roblox server-list pages to fetch. 1 is fastest; higher gives better server selection but slower hops.",
                 Default = tostring(SniperState.ServerHopPages or 1),
                 Numeric = true,
@@ -52388,11 +52388,11 @@ end
 
 function BuildSniperTab()
 --==================================================
--- SNIPER TAB â†’ UI
+-- SNIPER TAB → UI
 --==================================================
 
 --==================================================
--- SNIPER TAB â†’ CLEAN TABBOX LAYOUT
+-- SNIPER TAB → CLEAN TABBOX LAYOUT
 -- Left side: Configuration + Add Filter
 -- Right side: Watchlist + Egg Focus
 --==================================================
@@ -52516,7 +52516,7 @@ local ScanSpeedDropdown =
     SniperConfigBox:AddDropdown(
         "SniperScanSpeedMode",
         {
-            Text = "âš¡ Scan Speed",
+            Text = "⚡ Scan Speed",
             Tooltip = "Lower delay scans faster but can cause Server Shutdowns. Fast is recommended.",
             Values = {
                 "Max Speed",
@@ -52544,7 +52544,7 @@ ScanSpeedDropdown:OnChanged(function(value)
     HolyNotify(
         "Scan Speed Updated",
         tostring(SniperState.ScanSpeedMode)
-            .. " â€¢ "
+            .. " • "
             .. tostring(interval)
             .. "s interval",
         "zap",
@@ -52556,7 +52556,7 @@ local BoothDataRefreshDropdown =
     SniperConfigBox:AddDropdown(
         "BoothDataRefreshMode",
         {
-            Text = "ðŸ“¡ Booth Data Refresh",
+            Text = "📡 Booth Data Refresh",
             Tooltip = "How fast HOLY refreshes booth listings. Faster can snipe sooner but may cause lag. Recommended: Fast.",
             Values = {
                 "Aggressive",
@@ -52584,7 +52584,7 @@ BoothDataRefreshDropdown:OnChanged(function(value)
     HolyNotify(
         "Booth Data Refresh Updated",
         tostring(SniperState.BoothDataRefreshMode)
-            .. " â€¢ "
+            .. " • "
             .. tostring(interval)
             .. "s interval",
         "radio",
@@ -52603,7 +52603,7 @@ local StayAfterSnipeToggle =
     SniperConfigBox:AddToggle(
         "StayAfterSnipe",
         {
-            Text = "â±ï¸ Stay After Snipe",
+            Text = "⏱️ Stay After Snipe",
             Tooltip = "Stay in the server a little longer after Holy snipes a pet.",
             Default = SniperState.StayAfterSnipe == true,
         }
@@ -52692,7 +52692,7 @@ local InventoryLimitToggle =
     SniperConfigBox:AddToggle(
         "StopAtPetInventoryLimit",
         {
-            Text = "ðŸ“¦ Stop At Pet Limit",
+            Text = "📦 Stop At Pet Limit",
             Tooltip = "Stops Holy from buying when your visible pet inventory reaches the selected limit.",
             Default = SniperState.StopAtPetInventoryLimit == false,
         }
@@ -53324,7 +53324,7 @@ WatchlistViewButton:AddButton({
 
 WatchlistInfoLabel =
     SniperWatchlistBox:AddLabel(
-        "Watchlist 1 â€¢ 0 filters â€¢ Page 1/1",
+        "Watchlist 1 • 0 filters • Page 1/1",
         false
     )
 
@@ -53347,7 +53347,7 @@ end
 
 local PageButton =
     SniperWatchlistBox:AddButton({
-        Text = "â€¹ Prev",
+        Text = "‹ Prev",
 
         Func = function()
 
@@ -53364,7 +53364,7 @@ local PageButton =
     })
 
 PageButton:AddButton({
-    Text = "Next â€º",
+    Text = "Next ›",
 
     Func = function()
 
@@ -53677,7 +53677,7 @@ WatchlistImportButton:AddButton({
 
 --==================================================
 -- PRICE SYNC TAB
--- Listing Filters â†’ Sniper Watchlist MaxPrice.
+-- Listing Filters → Sniper Watchlist MaxPrice.
 -- Exact pet names only.
 --==================================================
 
@@ -53781,7 +53781,7 @@ end
 --==================================================
 
 SniperWatchlistBox:AddButton({
-    Text = "ðŸ—‘ Clear Watchlist",
+    Text = "🗑 Clear Watchlist",
     Tooltip = "Clear the currently viewed watchlist only.",
 
     Func = function()
@@ -54151,7 +54151,7 @@ RefreshWatchlistHUD = function()
     local function FormatCompactPrice(value)
 
         if value == math.huge then
-            return "âˆž"
+            return "∞"
         end
 
         local number =
@@ -54207,7 +54207,7 @@ RefreshWatchlistHUD = function()
                 string.format("%.1f", number)
         end
 
-        return "â‰¥"
+        return "≥"
             .. text
             .. suffix
     end
@@ -54431,7 +54431,7 @@ RefreshWatchlistHUD = function()
 
     RenderSection(
         1,
-        "â…   WATCHLIST 1"
+        "Ⅰ   WATCHLIST 1"
     )
 
     if visibleRows > 0
@@ -54453,7 +54453,7 @@ RefreshWatchlistHUD = function()
 
     RenderSection(
         2,
-        "â…¡  WATCHLIST 2"
+        "Ⅱ  WATCHLIST 2"
     )
 
     if visibleRows <= 0 then
@@ -54631,9 +54631,9 @@ local watchlistName =
 
     WatchlistInfoLabel:SetText(
         watchlistName
-            .. " â€¢ "
+            .. " • "
             .. tostring(total)
-            .. " filters â€¢ Page "
+            .. " filters • Page "
             .. tostring(WatchlistPage)
             .. "/"
             .. tostring(maxPages)
@@ -54739,7 +54739,7 @@ end
 local function FormatSniperConfirmMutation(filter)
 
     if type(filter) ~= "table" then
-        return "Off â€” buys normal and mutated pets"
+        return "Off — buys normal and mutated pets"
     end
 
     local mutationText =
@@ -54748,11 +54748,11 @@ local function FormatSniperConfirmMutation(filter)
         or tostring(filter.Mutation or "Off")
 
     if mutationText == "Off" then
-        return "Off â€” buys normal and mutated pets"
+        return "Off — buys normal and mutated pets"
     end
 
     if mutationText == "Mutated" then
-        return "Mutated Only â€” skips normal pets"
+        return "Mutated Only — skips normal pets"
     end
 
     return mutationText
@@ -55346,7 +55346,7 @@ SniperFilterBox:AddButton({
 
 end
 --==================================================
--- WEBHOOK TAB â†’ CONFIGURATION (UI ONLY)
+-- WEBHOOK TAB → CONFIGURATION (UI ONLY)
 --==================================================
 local WebhookBox
 
@@ -55790,7 +55790,7 @@ CreateSuccessEmbed = function(listing, toolName, source)
 
 local title =
     string.format(
-        "âš¡ SNIPED â€¢ %s [Age %s] [%s]",
+        "⚡ SNIPED • %s [Age %s] [%s]",
         tostring(confirmedPetName),
         tostring(confirmedAge or "Unknown"),
         FormatWebhookWeightKG(confirmedWeight)
@@ -55812,7 +55812,7 @@ local title =
 
 
                 {
-                    name = "ðŸ’° Bought For",
+                    name = "💰 Bought For",
                     value =
                     tostring(listing.Price or 0)
                     .. " Tokens",
@@ -55820,14 +55820,14 @@ local title =
                 },
 
                 {
-                    name = "ðŸ§¬ Mutation",
+                    name = "🧬 Mutation",
                     value =
                         tostring(mutationText or "Unknown"),
                     inline = true,
                 },
 
                 {
-                    name = "âš–ï¸ BaseWeight",
+                    name = "⚖️ BaseWeight",
                     value =
                         FormatWebhookBaseWeight(
                             listing.BaseWeight
@@ -55836,14 +55836,14 @@ local title =
                 },
 
                 {
-                    name = "ðŸ‘¤ Seller",
+                    name = "👤 Seller",
                     value =
                         tostring(sellerName),
                     inline = true,
                 },
 
                 {
-    name = "ðŸŽ’ Pet Inventory",
+    name = "🎒 Pet Inventory",
     value =
         type(FormatPersonalWebhookPetInventoryText) == "function"
         and FormatPersonalWebhookPetInventoryText()
@@ -55852,7 +55852,7 @@ local title =
 },
 
                 {
-                    name = "ðŸŒ Server",
+                    name = "🌍 Server",
                     value =
                         "```lua\n"
                         .. tostring(game.PlaceId)
@@ -55906,7 +55906,7 @@ CreateBoothSaleEmbed = function(sale)
             fields = {
 
                 {
-                    name = "ðŸ’° Sold For",
+                    name = "💰 Sold For",
                     value = string.format(
                         "%s Tokens",
                         tostring(
@@ -55942,7 +55942,7 @@ CreateBoothSaleEmbed = function(sale)
                 },
 
                 {
-                    name = "âœ¨ Token Balance",
+                    name = "✨ Token Balance",
                     value = string.format(
                         "%s Tokens",
                         tostring(GetTokenBalance())
@@ -55951,7 +55951,7 @@ CreateBoothSaleEmbed = function(sale)
                 },
 
                 {
-                    name = "ðŸŽ’ Pet Inventory",
+                    name = "🎒 Pet Inventory",
                     value =
                         type(FormatPersonalWebhookPetInventoryText) == "function"
                         and FormatPersonalWebhookPetInventoryText()
@@ -56839,7 +56839,7 @@ function BuildListingsTab()
     --==================================================
 
     ListingSetupBox:AddLabel(
-    "âš ï¸ Review Preview before adding.",
+    "⚠️ Review Preview before adding.",
     false
 )
 
@@ -57046,7 +57046,7 @@ local function RefreshListingSetupInputLabels()
 
     if ListingPriceInput then
         ListingPriceInput:SetText(
-            "ðŸŸ¢ Tokens  "
+            "🟢 Tokens  "
             .. FormatListingSetupValue(
                 ListingsState.Price,
                 "-"
@@ -57278,7 +57278,7 @@ end)
     ListingSetupBox:AddInput(
             "ListingPrice",
             {
-                Text = "ðŸŸ¢ Tokens",
+                Text = "🟢 Tokens",
                 Placeholder = "required",
                 Default = "",
                 Numeric = true,
@@ -57386,7 +57386,7 @@ print(
         ListingSafetyBox:AddToggle(
             "ListingAllowLowPrice",
             {
-                Text = "âš ï¸ Allow Low Price",
+                Text = "⚠️ Allow Low Price",
                 Tooltip = "Required before Holy can list pets below 100 tokens.",
                 Default = false,
             }
@@ -57410,7 +57410,7 @@ print(
         ListingSafetyBox:AddToggle(
             "ListingAutoUnfavorite",
             {
-                Text = "â¤ï¸ Auto Unfavorite",
+                Text = "❤️ Auto Unfavorite",
                 Default = false,
             }
         )
@@ -57432,7 +57432,7 @@ local StopAtFullBoothToggle =
     ListingSafetyBox:AddToggle(
         "ListingStopAtFullBooth",
         {
-            Text = "ðŸ›‘ Stop at Full Booth",
+            Text = "🛑 Stop at Full Booth",
             Tooltip = "Stops AutoList when your booth is 50/50 and resumes when a slot opens.",
             Default = true,
         }
@@ -57467,7 +57467,7 @@ local KeepRunningToggle =
     ListingSafetyBox:AddToggle(
         "ListingKeepRunning",
         {
-            Text = "â™¾ï¸ Keep Running",
+            Text = "♾️ Keep Running",
             Tooltip = "ON = AutoList keeps watching. OFF = AutoList stops when all current matching pets are handled.",
             Default = false,
         }
@@ -57512,7 +57512,7 @@ end)
         ListingActionsBox:AddDropdown(
             "ListingSpeedMode",
             {
-                Text = "âš¡ Listing Speed",
+                Text = "⚡ Listing Speed",
                 Tooltip = "Controls AutoList scan and CreateListing cooldown.",
                 Values = {
                 "Adaptive",
@@ -57543,7 +57543,7 @@ end)
         HolyNotify(
             "Listing Speed Updated",
             tostring(ListingsState.ListingSpeedMode)
-                .. " â€¢ cooldown "
+                .. " • cooldown "
                 .. tostring(ResolveListingCreateCooldown())
                 .. "s",
             "zap",
@@ -57602,7 +57602,7 @@ end)
         ListingActionsBox:AddToggle(
             "EnableAutoList",
             {
-                Text = "âš¡ Start AutoList",
+                Text = "⚡ Start AutoList",
                 Default = false,
             }
         )
@@ -57967,7 +57967,7 @@ ListingsState.Status =
 
     local BoothListedHeaderLabel =
         ListingBoothBox:AddLabel(
-            "0 listings â€¢ Page 1/1 â€¢ Not synced",
+            "0 listings • Page 1/1 • Not synced",
             false
         )
 
@@ -58268,7 +58268,7 @@ local function CreateBoothTableRow(rowIndex)
             row,
             UDim2.fromOffset(10, 0),
             UDim2.new(1, -178, 1, 0),
-            "â€¢ -",
+            "• -",
             Enum.TextXAlignment.Left
         )
 
@@ -58298,7 +58298,7 @@ local function CreateBoothTableRow(rowIndex)
             row,
             UDim2.new(1, -35, 0, 0),
             UDim2.fromOffset(30, 20),
-            "Ã—",
+            "×",
             Enum.TextXAlignment.Center
         )
 
@@ -58471,8 +58471,8 @@ local function RenderBoothListedTable()
 
             local prefix =
                 item.Favorite
-                and "â˜… "
-                or "â€¢ "
+                and "★ "
+                or "• "
 
             row.Pet.Text =
                 prefix
@@ -58489,7 +58489,7 @@ local function RenderBoothListedTable()
     )
 
             row.Remove.Text =
-                "Ã—"
+                "×"
 
             row.Button.Active =
                 true
@@ -58518,7 +58518,7 @@ local function RenderBoothListedTable()
         else
 
             row.Pet.Text =
-                "â€¢ -"
+                "• -"
 
             row.Price.Text =
                 "-"
@@ -58555,7 +58555,7 @@ end
 
     local BoothListedPageButton =
         ListingBoothBox:AddButton({
-            Text = "â€¹ Prev",
+            Text = "‹ Prev",
             Tooltip = "Previous booth listing page.",
             Func = function()
 
@@ -58575,7 +58575,7 @@ end
         })
 
     BoothListedPageButton:AddButton({
-        Text = "Next â€º",
+        Text = "Next ›",
         Tooltip = "Next booth listing page.",
         Func = function()
 
@@ -58764,7 +58764,7 @@ end
 --==================================================
 
 local PreviewVerdictLabel =
-    ListingPreviewBox:AddLabel("âš ï¸ Not Ready", false)
+    ListingPreviewBox:AddLabel("⚠️ Not Ready", false)
 
 local PreviewFilterLabel =
     ListingPreviewBox:AddLabel("Pet: -", false)
@@ -59055,7 +59055,7 @@ local FilterHelpLabel =
             FilterHeaderLabel:SetText(
     "Active Filters: "
     .. tostring(#filters)
-    .. "  â€¢  Page "
+    .. "  •  Page "
     .. tostring(page)
     .. "/"
     .. tostring(maxPage)
@@ -59228,7 +59228,7 @@ local FilterHelpLabel =
             if ListingsState.StopAtFullBooth == true
             and listedCount >= boothCapacity then
                 boothText =
-                    boothText .. " â€¢ FULL"
+                    boothText .. " • FULL"
             else
                 boothText =
                     boothText .. " | " .. boothStatus
@@ -59272,11 +59272,11 @@ local FilterHelpLabel =
             BoothListedHeaderLabel:SetText(
                 tostring(total)
                 .. " listings"
-                .. " â€¢ Page "
+                .. " • Page "
                 .. tostring(page)
                 .. "/"
                 .. tostring(maxPage)
-                .. " â€¢ "
+                .. " • "
                 .. boothStatus
             )
         end
@@ -59443,7 +59443,7 @@ local setupAllowed =
     and levelAllowed
 
 local verdictText =
-    "âš ï¸ Not Ready"
+    "⚠️ Not Ready"
 
 local resultText =
     "Fix required fields before adding this filter."
@@ -59453,7 +59453,7 @@ if setupAllowed then
     if readyCount > 0 then
 
         verdictText =
-            "âœ… Ready To List"
+            "✅ Ready To List"
 
         resultText =
             "AutoList can queue "
@@ -59469,7 +59469,7 @@ if setupAllowed then
     and alreadyListed >= matchingCount then
 
         verdictText =
-            "âœ… Already Handled"
+            "✅ Already Handled"
 
         resultText =
             "All matching pets are already listed in your booth."
@@ -59477,7 +59477,7 @@ if setupAllowed then
     elseif matchingCount > 0 then
 
         verdictText =
-            "âœ… Filter Valid"
+            "✅ Filter Valid"
 
         resultText =
             "Filter is valid, but no new pets are ready right now."
@@ -59485,7 +59485,7 @@ if setupAllowed then
     else
 
         verdictText =
-            "âœ… Filter Valid"
+            "✅ Filter Valid"
 
         resultText =
             "No inventory pets currently match this setup."
@@ -59682,7 +59682,7 @@ function BuildWebhookTab()
         WebhookBox:AddToggle(
             "EnableWebhook",
             {
-                Text = "ðŸ”— Enable Webhook",
+                Text = "🔗 Enable Webhook",
                 Tooltip = "Master switch for all personal webhook notifications.",
                 Default = WebhookState.Enabled == true,
             }
@@ -59725,7 +59725,7 @@ function BuildWebhookTab()
         WebhookDependencyBox:AddToggle(
             "WebhookSuccessfulSnipes",
             {
-                Text = "âš¡ Successful Snipes",
+                Text = "⚡ Successful Snipes",
                 Tooltip = "Send a webhook when Holy successfully snipes a pet.",
                 Default = WebhookState.NotifySuccessfulSnipe == true,
             }
@@ -59743,7 +59743,7 @@ function BuildWebhookTab()
         WebhookDependencyBox:AddToggle(
             "WebhookBoothSales",
             {
-                Text = "ðŸ’° Booth Sales",
+                Text = "💰 Booth Sales",
                 Tooltip = "Send a webhook when one of your booth pets sells.",
                 Default = WebhookState.NotifyBoothSales == true,
             }
@@ -59761,7 +59761,7 @@ function BuildWebhookTab()
         WebhookDependencyBox:AddToggle(
             "WebhookAgeBreaks",
             {
-                Text = "ðŸŒŸ Age Breaks",
+                Text = "🌟 Age Breaks",
                 Tooltip = "Send a webhook when Holy claims an Age Breaker pet.",
                 Default = WebhookState.NotifyAgeBreaks == true,
             }
@@ -59779,7 +59779,7 @@ function BuildWebhookTab()
         WebhookDependencyBox:AddToggle(
             "WebhookErrors",
             {
-                Text = "âš ï¸ Game Errors",
+                Text = "⚠️ Game Errors",
                 Tooltip = "Send a webhook when Holy detects an error, disconnect, or teleport issue.",
                 Default = WebhookState.NotifyErrors == true,
             }
@@ -59807,7 +59807,7 @@ function BuildWebhookTab()
         WebhookDependencyBox:AddInput(
             "WebhookPingSuccessfulSnipes",
             {
-                Text = "ðŸ“£ Snipe Ping",
+                Text = "📣 Snipe Ping",
                 Placeholder = "@everyone | @here | <@userid> | empty = no ping",
                 Numeric = false,
                 Finished = false,
@@ -59826,7 +59826,7 @@ function BuildWebhookTab()
         WebhookDependencyBox:AddInput(
             "WebhookPingBoothSales",
             {
-                Text = "ðŸ›’ Booth Sale Ping",
+                Text = "🛒 Booth Sale Ping",
                 Placeholder = "@everyone | @here | <@userid> | empty = no ping",
                 Numeric = false,
                 Finished = false,
@@ -59845,7 +59845,7 @@ function BuildWebhookTab()
         WebhookDependencyBox:AddInput(
             "WebhookPingAgeBreaks",
             {
-                Text = "ðŸŒŸ Age Break Ping",
+                Text = "🌟 Age Break Ping",
                 Placeholder = "@everyone | @here | <@userid> | empty = no ping",
                 Numeric = false,
                 Finished = false,
@@ -59864,7 +59864,7 @@ function BuildWebhookTab()
         WebhookDependencyBox:AddInput(
             "WebhookPingErrors",
             {
-                Text = "ðŸš¨ Error Ping",
+                Text = "🚨 Error Ping",
                 Placeholder = "@everyone | @here | <@userid> | empty = no ping",
                 Numeric = false,
                 Finished = false,
@@ -59893,7 +59893,7 @@ function BuildWebhookTab()
         WebhookDependencyBox:AddInput(
             "WebhookURL",
             {
-                Text = "ðŸŒ Main Webhook URL",
+                Text = "🌐 Main Webhook URL",
                 Placeholder = "Default Discord webhook URL",
                 Numeric = false,
                 Finished = true,
@@ -59912,7 +59912,7 @@ function BuildWebhookTab()
         WebhookDependencyBox:AddInput(
             "WebhookSecondaryURL",
             {
-                Text = "ðŸŒ Secondary Webhook URL",
+                Text = "🌐 Secondary Webhook URL",
                 Placeholder = "Optional second Discord webhook URL",
                 Numeric = false,
                 Finished = true,
@@ -59946,7 +59946,7 @@ function BuildWebhookTab()
         WebhookDependencyBox:AddDropdown(
             "WebhookSuccessfulSnipeRoute",
             {
-                Text = "âš¡ Snipe Route",
+                Text = "⚡ Snipe Route",
                 Tooltip = "Choose which webhook URL successful snipes use.",
                 Values = WebhookRouteOptions,
                 Default =
@@ -59971,7 +59971,7 @@ function BuildWebhookTab()
         WebhookDependencyBox:AddDropdown(
             "WebhookBoothSalesRoute",
             {
-                Text = "ðŸ’° Booth Sale Route",
+                Text = "💰 Booth Sale Route",
                 Tooltip = "Choose which webhook URL booth sale logs use.",
                 Values = WebhookRouteOptions,
                 Default =
@@ -59996,7 +59996,7 @@ function BuildWebhookTab()
         WebhookDependencyBox:AddDropdown(
             "WebhookAgeBreaksRoute",
             {
-                Text = "ðŸŒŸ Age Break Route",
+                Text = "🌟 Age Break Route",
                 Tooltip = "Choose which webhook URL Age Break logs use.",
                 Values = WebhookRouteOptions,
                 Default =
@@ -60021,7 +60021,7 @@ function BuildWebhookTab()
         WebhookDependencyBox:AddDropdown(
             "WebhookErrorsRoute",
             {
-                Text = "ðŸš¨ Error Route",
+                Text = "🚨 Error Route",
                 Tooltip = "Choose which webhook URL errors/disconnect logs use.",
                 Values = WebhookRouteOptions,
                 Default =
@@ -60054,7 +60054,7 @@ function BuildWebhookTab()
 
     WebhookDependencyBox:AddButton({
 
-        Text = "ðŸ§ª Test Main Webhook",
+        Text = "🧪 Test Main Webhook",
 
         Func = function()
 
@@ -60079,7 +60079,7 @@ function BuildWebhookTab()
                 ApplyWebhookPing(
                     {
                         embeds = {{
-                            title = "âš¡ Holy Main Webhook Connected",
+                            title = "⚡ Holy Main Webhook Connected",
 
                             description =
                                 "Main webhook delivery is working.",
@@ -60107,7 +60107,7 @@ function BuildWebhookTab()
                                 },
 
                                 {
-                                    name = "ðŸŽ’ Pet Inventory",
+                                    name = "🎒 Pet Inventory",
                                     value =
                                         type(FormatPersonalWebhookPetInventoryText) == "function"
                                         and FormatPersonalWebhookPetInventoryText()
@@ -60171,7 +60171,7 @@ function BuildWebhookTab()
 
     WebhookDependencyBox:AddButton({
 
-        Text = "ðŸ§ª Test Secondary Webhook",
+        Text = "🧪 Test Secondary Webhook",
 
         Func = function()
 
@@ -60198,7 +60198,7 @@ function BuildWebhookTab()
             local payload =
                 {
                     embeds = {{
-                        title = "ðŸŒ Holy Secondary Webhook Connected",
+                        title = "🌐 Holy Secondary Webhook Connected",
 
                         description =
                             "Secondary webhook delivery is working.",
@@ -60226,7 +60226,7 @@ function BuildWebhookTab()
                             },
 
                             {
-                                name = "ðŸŽ’ Pet Inventory",
+                                name = "🎒 Pet Inventory",
                                 value =
                                     type(FormatPersonalWebhookPetInventoryText) == "function"
                                     and FormatPersonalWebhookPetInventoryText()
@@ -60438,7 +60438,7 @@ function GetFreshRetryServer(placeId)
     end
 
     if #candidates <= 0 then
-        warn("[TeleportRetry] Server pool exhausted â†’ clearing blacklist")
+        warn("[TeleportRetry] Server pool exhausted → clearing blacklist")
 
         table.clear(TeleportRetryState.BlockedServers)
 
@@ -60523,7 +60523,7 @@ function ForceRetryTeleport(reason)
 
             print(
                 string.format(
-                    "[TeleportRetry] Attempt %s/%s â†’ %s | %s",
+                    "[TeleportRetry] Attempt %s/%s → %s | %s",
                     tostring(TeleportRetryState.Attempt),
                     tostring(TeleportRetryState.MaxAttempts),
                     tostring(target),
@@ -60572,7 +60572,7 @@ TeleportService.TeleportInitFailed:Connect(function(
 
     warn(
         string.format(
-            "[Teleport] Failed â†’ %s | %s",
+            "[Teleport] Failed → %s | %s",
             tostring(resultName),
             tostring(errorMessage)
         )
@@ -60609,7 +60609,7 @@ end)
 function ForceReconnectFromTerminalPrompt(reason)
 
     print(
-        "[AutoReconnect] Terminal prompt â†’ immediate server retry:",
+        "[AutoReconnect] Terminal prompt → immediate server retry:",
         tostring(reason)
     )
 
@@ -62511,7 +62511,7 @@ function EquipShowcasePet(force)
 
     -- print(
     --     string.format(
-    --         "[BoothPet] Equipping â†’ %s | %.2f KG | UID %s",
+    --         "[BoothPet] Equipping → %s | %.2f KG | UID %s",
     --         tostring(bestPet.PetName),
     --         tonumber(bestPet.Weight) or 0,
     --         tostring(bestPet.UID)
@@ -62555,7 +62555,7 @@ AutoServerHopWorker = function()
 
         --==================================================
         -- ADD HOP TIME AFTER SALE
-        -- Delays Booth â†’ Server Cycle â†’ Join New Server.
+        -- Delays Booth → Server Cycle → Join New Server.
         --==================================================
 
         if type(ShouldBlockHopForBoothSale) == "function"
@@ -63442,7 +63442,7 @@ end
 
             print(
                 string.format(
-                    "[BoothPet] Post-snipe re-equip â†’ %s",
+                    "[BoothPet] Post-snipe re-equip → %s",
                     tostring(targetPet)
                 )
             )
@@ -63534,7 +63534,7 @@ function RefreshAgeBreakerUI()
 
     if AgeBreakerTargetLabel then
         AgeBreakerTargetLabel:SetText(
-            "Target: ðŸ”’ "
+            "Target: 🔒 "
             .. FormatAgeBreakerPetLine(
                 AgeBreakerState.TargetPet
             )
@@ -63543,7 +63543,7 @@ function RefreshAgeBreakerUI()
 
     if AgeBreakerSacrificeLabel then
         AgeBreakerSacrificeLabel:SetText(
-            "Sacrifice: ðŸ§ª "
+            "Sacrifice: 🧪 "
             .. FormatAgeBreakerPetLine(
                 AgeBreakerState.SacrificePet
             )
@@ -63569,8 +63569,8 @@ function RefreshAgeBreakerUI()
 
         local worldText =
             IsTradeWorld()
-            and "Trade World âš ï¸"
-            or "Normal World âœ…"
+            and "Trade World ⚠️"
+            or "Normal World ✅"
 
         local machineText =
     "World: "
@@ -63717,26 +63717,26 @@ LoadAgeBreakerConfig()
 
     local SetupBox =
         Tabs.AgeBreaker:AddLeftGroupbox(
-            "ðŸ§¬ Queue Setup",
+            "🧬 Queue Setup",
             "dna"
         )
 
     local QueuePoolBox =
         Tabs.AgeBreaker:AddLeftGroupbox(
-            "ðŸ“‹ Queue & Pool",
+            "📋 Queue & Pool",
             "list"
         )
 
     local StatusBox =
         Tabs.AgeBreaker:AddRightGroupbox(
-            "ðŸ‘ï¸ Status",
+            "👁️ Status",
             "eye"
         )
 
     SetupBox:AddToggle(
         "AgeBreakerEnabled",
         {
-            Text = "ðŸ§¬ Enable Age Breaker",
+            Text = "🧬 Enable Age Breaker",
             Tooltip = "Enables Age Breaker queue/pool helper.",
             Default = AgeBreakerState.Enabled == true,
         }
@@ -63805,7 +63805,7 @@ RefreshAgeBreakerUI()
     SetupBox:AddToggle(
         "AgeBreakerAutoTeleportWhenReady",
         {
-            Text = "ðŸŒ Auto Teleport When Ready",
+            Text = "🌍 Auto Teleport When Ready",
             Tooltip = "When the machine is ready and you are in Trade World, teleport to Normal World.",
             Default = AgeBreakerState.AutoTeleportWhenReady == true,
         }
@@ -63835,7 +63835,7 @@ end
     SetupBox:AddToggle(
         "AgeBreakerAutoClaimWhenReady",
         {
-            Text = "ðŸŽ Auto Claim When Ready",
+            Text = "🎁 Auto Claim When Ready",
             Tooltip = "Claims the Age Break reward automatically in Normal World when the timer is ready.",
             Default = AgeBreakerState.AutoClaimWhenReady == true,
         }
@@ -63863,7 +63863,7 @@ end
     SetupBox:AddToggle(
         "AgeBreakerAutoResubmitAfterClaim",
         {
-            Text = "ðŸ” Auto Re-Submit After Claim",
+            Text = "🔁 Auto Re-Submit After Claim",
             Tooltip = "After claiming, uses the next sacrifice from the pool and submits the active target again.",
             Default = AgeBreakerState.AutoResubmitAfterClaim == true,
         }
@@ -63891,7 +63891,7 @@ end
 SetupBox:AddToggle(
     "AgeBreakerAutoTradeWorldWhenMachineStarts",
     {
-        Text = "ðŸŒ Auto Teleport to Trade World",
+        Text = "🌐 Auto Teleport to Trade World",
         Tooltip = "Automatically teleport to the Trade World when the Age Breaker machine starts.",
         Default = AgeBreakerState.AutoTeleportToTradeWorldOnMachineStart == true,
     }
@@ -63962,7 +63962,7 @@ end)
     end)
 
     SetupBox:AddButton({
-        Text = "âž• Add Targets",
+        Text = "➕ Add Targets",
         Tooltip = "Adds selected target pets to the queue.",
         Func = function()
 
@@ -63990,7 +63990,7 @@ end)
         SetupBox:AddDropdown(
             "AgeBreakerSacrificeMulti",
             {
-                Text = "ðŸ§ª Sacrifice Pets",
+                Text = "🧪 Sacrifice Pets",
                 Tooltip = "Select trash pets HOLY is allowed to consume.",
                 Values = {},
                 Default = {},
@@ -64011,7 +64011,7 @@ end)
     end)
 
     SetupBox:AddButton({
-        Text = "âž• Add Sacrifices",
+        Text = "➕ Add Sacrifices",
         Tooltip = "Adds selected sacrifice pets to the sacrifice pool.",
         Func = function()
 
@@ -64030,7 +64030,7 @@ end)
     })
 
     SetupBox:AddButton({
-        Text = "âš¡ Add All Safe Matching",
+        Text = "⚡ Add All Safe Matching",
         Tooltip = "Adds all safe sacrifices matching the active target.",
         Func = function()
 
@@ -64049,7 +64049,7 @@ end)
     })
 
     SetupBox:AddButton({
-        Text = "ðŸ”„ Refresh Inventory",
+        Text = "🔄 Refresh Inventory",
         Tooltip = "Refreshes target/sacrifice dropdowns from Backpack/Character.",
         Func = function()
 
@@ -64083,7 +64083,7 @@ end)
         )
 
     QueuePoolBox:AddButton({
-        Text = "ðŸ§¹ Clear Targets",
+        Text = "🧹 Clear Targets",
         Tooltip = "Clears the saved target queue.",
         Risky = true,
         DoubleClick = true,
@@ -64104,7 +64104,7 @@ end)
     })
 
     QueuePoolBox:AddButton({
-        Text = "ðŸ§¹ Clear Sacrifices",
+        Text = "🧹 Clear Sacrifices",
         Tooltip = "Clears the saved sacrifice pool.",
         Risky = true,
         DoubleClick = true,
@@ -64162,7 +64162,7 @@ end)
         )
 
     StatusBox:AddButton({
-        Text = "ðŸ”Ž Prepare Pair",
+        Text = "🔎 Prepare Pair",
         Tooltip = "Finds the active target and next valid sacrifice from the pool.",
         Func = function()
 
@@ -64181,7 +64181,7 @@ end)
     })
 
     StatusBox:AddButton({
-        Text = "ðŸ§¬ Submit Next Pair",
+        Text = "🧬 Submit Next Pair",
         Tooltip = "Submits active target + next sacrifice from the pool. Only works in Normal World.",
         Func = function()
 
@@ -64207,7 +64207,7 @@ end)
     })
 
     StatusBox:AddButton({
-        Text = "ðŸŽ Claim Age Break",
+        Text = "🎁 Claim Age Break",
         Tooltip = "Claims only when the machine timer says it is ready.",
         Func = function()
 
@@ -64230,7 +64230,7 @@ end)
     })
 
     StatusBox:AddButton({
-        Text = "ðŸ”„ Refresh Machine",
+        Text = "🔄 Refresh Machine",
         Tooltip = "Refreshes the machine timer/status.",
         Func = function()
 
