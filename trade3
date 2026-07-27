@@ -56094,6 +56094,11 @@ OwnBoothTracker = {
     -- Token replication can arrive several seconds after the listing update.
     MaxConfirmDelay = 30,
 
+    -- If the booth listing is still gone but the token balance never
+    -- replicates locally, confirm it after a short grace period so a
+    -- successful sale cannot silently lose its personal webhook.
+    FallbackConfirmDelay = 7,
+
     ScanInterval = 0.35,
 
     -- Allows tiny UI/replication mismatch but still blocks manual unlisting.
@@ -56208,7 +56213,27 @@ function ResolveOwnBoothPlayerData(data, boothData, localUserId)
             or tonumber(text:match("_(%d+)$"))
     end
 
-    if ResolveUserId(owner) ~= localUserId then
+    local function MatchesLocalUserId(value)
+
+        if ResolveUserId(value) == localUserId then
+            return true
+        end
+
+        if type(value) == "table" then
+            return false
+        end
+
+        for userIdText in tostring(value or ""):gmatch("%d+") do
+
+            if tonumber(userIdText) == localUserId then
+                return true
+            end
+        end
+
+        return false
+    end
+
+    if not MatchesLocalUserId(owner) then
         return nil
     end
 
@@ -56226,7 +56251,7 @@ function ResolveOwnBoothPlayerData(data, boothData, localUserId)
     for playerKey, playerData in pairs(data.Players) do
 
         if type(playerData) == "table"
-        and ResolveUserId(playerKey) == localUserId then
+        and MatchesLocalUserId(playerKey) then
             return playerData
         end
     end
@@ -56545,19 +56570,44 @@ function FireConfirmedBoothSale(oldListing)
         end)
     end
 
-    QueueGlobalBoothSaleWebhook(oldListing)
+    local globalQueued, globalQueueError =
+        pcall(function()
+            return QueueGlobalBoothSaleWebhook(oldListing)
+        end)
+
+    if not globalQueued then
+        warn(
+            "[GLOBAL BOOTH WEBHOOK] Queue error:",
+            tostring(globalQueueError)
+        )
+    end
 
     if WebhookState.Enabled
     and WebhookState.NotifyBoothSales then
 
         local queued =
-            QueueWebhook(
-            ApplyWebhookPing(
-                CreateBoothSaleEmbed(oldListing),
-                WebhookState.PingBoothSales
-            ),
-            WebhookState.BoothSalesRoute
-        )
+            false
+
+        local queuedOk, queueResult =
+            pcall(function()
+                return QueueWebhook(
+                    ApplyWebhookPing(
+                        CreateBoothSaleEmbed(oldListing),
+                        WebhookState.PingBoothSales
+                    ),
+                    WebhookState.BoothSalesRoute
+                )
+            end)
+
+        if queuedOk then
+            queued =
+                queueResult == true
+        else
+            warn(
+                "[WEBHOOK] Booth sale payload/queue error:",
+                tostring(queueResult)
+            )
+        end
 
         if queued then
             print("[WEBHOOK] Booth sale queued")
@@ -56715,8 +56765,7 @@ task.spawn(function()
         local consumedBudget = 0
         local confirmedCount = 0
 
-        if tokenGainBudget > 0
-        and #confirmBatch > 0 then
+        if #confirmBatch > 0 then
 
             for _, entry in ipairs(confirmBatch) do
 
@@ -56751,6 +56800,21 @@ task.spawn(function()
                     confirmedCount + 1
 
                     OwnBoothTracker.PendingMissing[listingKey] = nil
+                elseif entry.Elapsed >= OwnBoothTracker.FallbackConfirmDelay
+                and SafeElapsed(LatestBoothUpdate) <= 2 then
+
+                    FireConfirmedBoothSale(oldListing)
+
+                    confirmedCount =
+                        confirmedCount + 1
+
+                    OwnBoothTracker.PendingMissing[listingKey] = nil
+
+                    warn(
+                        "[BOOTH SALE FALLBACK CONFIRMED]",
+                        tostring(oldListing.PetName),
+                        "| token balance did not replicate"
+                    )
                 end
             end
         end
@@ -65100,6 +65164,270 @@ HolyLoading:Continue()
 
 ScriptState.BootComplete =
     true
+
+--==================================================
+-- MAIN UI LAUNCHER
+-- Always-visible, draggable Holy button. It is intentionally separate
+-- from the library window so it remains available after the UI is hidden.
+--==================================================
+
+function CreateHolyMainLauncher()
+
+    local parent =
+        nil
+
+    if type(gethui) == "function" then
+
+        pcall(function()
+            parent = gethui()
+        end)
+    end
+
+    if not parent then
+
+        local player =
+            Players.LocalPlayer
+
+        parent =
+            player
+            and player:FindFirstChild("PlayerGui")
+            or CoreGui
+    end
+
+    if not parent then
+        return nil
+    end
+
+    local oldLauncher =
+        parent:FindFirstChild("HolyMainLauncher")
+
+    if oldLauncher then
+        oldLauncher:Destroy()
+    end
+
+    local screenGui =
+        Instance.new("ScreenGui")
+
+    screenGui.Name =
+        "HolyMainLauncher"
+
+    screenGui.ResetOnSpawn =
+        false
+
+    screenGui.IgnoreGuiInset =
+        true
+
+    screenGui.DisplayOrder =
+        10000
+
+    screenGui.ZIndexBehavior =
+        Enum.ZIndexBehavior.Sibling
+
+    screenGui.Parent =
+        parent
+
+    local button =
+        Instance.new("TextButton")
+
+    button.Name =
+        "HolyLogoButton"
+
+    button.Size =
+        UDim2.fromOffset(58, 58)
+
+    button.Position =
+        UDim2.new(0, 18, 0.5, -29)
+
+    button.BackgroundColor3 =
+        Color3.fromRGB(72, 34, 128)
+
+    button.BorderSizePixel =
+        0
+
+    button.Text =
+        "H"
+
+    button.TextColor3 =
+        Color3.fromRGB(255, 239, 186)
+
+    button.TextStrokeColor3 =
+        Color3.fromRGB(20, 9, 42)
+
+    button.TextStrokeTransparency =
+        0
+
+    button.TextSize =
+        28
+
+    button.Font =
+        Enum.Font.GothamBlack
+
+    button.AutoButtonColor =
+        true
+
+    button.Active =
+        true
+
+    button.ZIndex =
+        10001
+
+    button.Parent =
+        screenGui
+
+    local corner =
+        Instance.new("UICorner")
+
+    corner.CornerRadius =
+        UDim.new(1, 0)
+
+    corner.Parent =
+        button
+
+    local stroke =
+        Instance.new("UIStroke")
+
+    stroke.Color =
+        Color3.fromRGB(255, 205, 105)
+
+    stroke.Thickness =
+        2
+
+    stroke.Transparency =
+        0.15
+
+    stroke.Parent =
+        button
+
+    local gradient =
+        Instance.new("UIGradient")
+
+    gradient.Color =
+        ColorSequence.new({
+            ColorSequenceKeypoint.new(
+                0,
+                Color3.fromRGB(150, 82, 255)
+            ),
+            ColorSequenceKeypoint.new(
+                1,
+                Color3.fromRGB(45, 18, 90)
+            ),
+        })
+
+    gradient.Rotation =
+        45
+
+    gradient.Parent =
+        button
+
+    local dragging =
+        false
+
+    local dragged =
+        false
+
+    local dragStart =
+        nil
+
+    local startPosition =
+        nil
+
+    button.InputBegan:Connect(function(input)
+
+        if input.UserInputType ~= Enum.UserInputType.MouseButton1
+        and input.UserInputType ~= Enum.UserInputType.Touch then
+            return
+        end
+
+        dragging =
+            true
+
+        dragged =
+            false
+
+        dragStart =
+            input.Position
+
+        startPosition =
+            button.Position
+
+        input.Changed:Connect(function()
+
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end)
+
+    UserInputService.InputChanged:Connect(function(input)
+
+        if not dragging then
+            return
+        end
+
+        if input.UserInputType ~= Enum.UserInputType.MouseMovement
+        and input.UserInputType ~= Enum.UserInputType.Touch then
+            return
+        end
+
+        local delta =
+            input.Position - dragStart
+
+        if delta.Magnitude > 3 then
+            dragged = true
+        end
+
+        button.Position =
+            UDim2.new(
+                startPosition.X.Scale,
+                startPosition.X.Offset + delta.X,
+                startPosition.Y.Scale,
+                startPosition.Y.Offset + delta.Y
+            )
+    end)
+
+    button.MouseButton1Click:Connect(function()
+
+        if dragged then
+            return
+        end
+
+        local toggled =
+            false
+
+        if Library
+        and type(Library.Toggle) == "function" then
+
+            local ok =
+                pcall(function()
+                    Library:Toggle()
+                end)
+
+            toggled =
+                ok
+        end
+
+        if not toggled
+        and Window
+        and type(Window.Toggle) == "function" then
+
+            local ok =
+                pcall(function()
+                    Window:Toggle()
+                end)
+
+            toggled =
+                ok
+        end
+
+        if not toggled then
+            warn("[HOLY LAUNCHER] Unable to toggle the main UI.")
+        end
+    end)
+
+    return screenGui
+end
+
+CreateHolyMainLauncher()
 
 if UIState.AutoMinimize == true
 or UIState.PendingAutoClose == true then
