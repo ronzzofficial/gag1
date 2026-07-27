@@ -4675,12 +4675,10 @@ WebhookState = {
 
     NotifySuccessfulSnipe = true,
     NotifyBoothSales = true,
-    NotifyAgeBreaks = true,
     NotifyErrors = true,
 
     PingSuccessfulSnipes = "",
     PingBoothSales = "",
-    PingAgeBreaks = "",
     PingErrors = "",
 
     -- Main/default personal webhook.
@@ -4695,7 +4693,6 @@ WebhookState = {
     -- "Secondary" = SecondaryURL, fallback to URL if empty.
     SuccessfulSnipeRoute = "Main",
     BoothSalesRoute = "Main",
-    AgeBreaksRoute = "Secondary",
     ErrorsRoute = "Main",
 
     Queue = {},
@@ -32137,14 +32134,29 @@ function FindHolyFriendNotificationRoot(instance)
     local current =
         instance
 
-    for _ = 1, 8 do
+    local fallback =
+        nil
+
+    for _ = 1, 12 do
 
         if not current
         or current == CoreGui then
             break
         end
 
-        if current.Name == "Notification" then
+        local name =
+            tostring(current.Name or ""):lower()
+
+        if name == "notification"
+        or name:find("notification", 1, true)
+        or name:find("friend", 1, true) then
+            fallback = current
+        end
+
+        local notificationText =
+            current:FindFirstChild("NotificationText", true)
+
+        if notificationText then
             return current
         end
 
@@ -32152,7 +32164,7 @@ function FindHolyFriendNotificationRoot(instance)
             current.Parent
     end
 
-    return nil
+    return fallback
 end
 
 function ClickHolyGuiButton(button)
@@ -32211,6 +32223,56 @@ function ClickHolyGuiButton(button)
         end)
     end
 
+    if not clicked then
+
+        pcall(function()
+
+            local virtualInput =
+                game:GetService("VirtualInputManager")
+
+            local position =
+                button.AbsolutePosition
+
+            local size =
+                button.AbsoluteSize
+
+            if not position
+            or not size
+            or size.X <= 0
+            or size.Y <= 0 then
+                return
+            end
+
+            local x =
+                math.floor(position.X + size.X / 2)
+
+            local y =
+                math.floor(position.Y + size.Y / 2)
+
+            virtualInput:SendMouseButtonEvent(
+                x,
+                y,
+                0,
+                true,
+                game,
+                0
+            )
+
+            task.wait(0.05)
+
+            virtualInput:SendMouseButtonEvent(
+                x,
+                y,
+                0,
+                false,
+                game,
+                0
+            )
+
+            clicked = true
+        end)
+    end
+
     return clicked
 end
 
@@ -32259,27 +32321,70 @@ function TryAcceptHolyFriendNotification(instance)
     end
 
     local notificationText =
-        root:FindFirstChild("NotificationText")
+        root:FindFirstChild("NotificationText", true)
 
     local acceptButton =
-        root:FindFirstChild("Button1")
-
-    if not notificationText
-    or not acceptButton then
-        return false
-    end
+        root:FindFirstChild("Button1", true)
 
     local text =
         ReadHolyGuiText(notificationText)
 
-    local buttonText =
-        ReadHolyGuiText(acceptButton)
+    if text == "" then
 
-    if text ~= "Sent you a friend request!" then
+        for _, descendant in ipairs(root:GetDescendants()) do
+
+            local candidate =
+                ReadHolyGuiText(descendant)
+
+            local lowerCandidate =
+                candidate:lower()
+
+            if lowerCandidate:find("friend request", 1, true)
+            or (
+                lowerCandidate:find("sent you", 1, true)
+                and lowerCandidate:find("friend", 1, true)
+            ) then
+                text = candidate
+                break
+            end
+        end
+    end
+
+    if not acceptButton
+    or not acceptButton:IsA("GuiButton") then
+
+        for _, descendant in ipairs(root:GetDescendants()) do
+
+            if descendant:IsA("GuiButton") then
+
+                local buttonText =
+                    ReadHolyGuiText(descendant):lower()
+
+                local buttonName =
+                    tostring(descendant.Name or ""):lower()
+
+                if buttonText == "accept"
+                or buttonName == "accept"
+                or buttonName:find("accept", 1, true) then
+                    acceptButton = descendant
+                    break
+                end
+            end
+        end
+    end
+
+    local lowerText =
+        tostring(text or ""):lower()
+
+    if not lowerText:find("friend request", 1, true)
+    and not (
+        lowerText:find("sent you", 1, true)
+        and lowerText:find("friend", 1, true)
+    ) then
         return false
     end
 
-    if buttonText ~= "Accept" then
+    if not acceptButton then
         return false
     end
 
@@ -32291,18 +32396,18 @@ function TryAcceptHolyFriendNotification(instance)
         return false
     end
 
-    AutoFriendState.LastNotificationRoot =
-        root
-
-    AutoFriendState.LastAcceptedAt =
-        now
-
     local clicked =
         ClickHolyGuiButton(
             acceptButton
         )
 
     if clicked then
+
+        AutoFriendState.LastNotificationRoot =
+            root
+
+        AutoFriendState.LastAcceptedAt =
+            now
 
         AutoFriendState.AcceptedThisSession =
             SafeNumber(
@@ -32342,17 +32447,8 @@ function StartAutoFriendRequestWatcher()
     AutoFriendState.WatcherStarted =
         true
 
-    local robloxGui =
-        CoreGui:FindFirstChild("RobloxGui")
-
-    local notificationFrame =
-        robloxGui
-        and robloxGui:FindFirstChild("NotificationFrame")
-
     local watchRoot =
-        notificationFrame
-        or robloxGui
-        or CoreGui
+        CoreGui
 
     watchRoot.DescendantAdded:Connect(function(instance)
 
@@ -32373,20 +32469,10 @@ function StartAutoFriendRequestWatcher()
     -- Catch an already visible request if it appeared before the watcher started.
     task.defer(function()
 
-        local currentRobloxGui =
-            CoreGui:FindFirstChild("RobloxGui")
+        for _, descendant in ipairs(CoreGui:GetDescendants()) do
 
-        local currentNotificationFrame =
-            currentRobloxGui
-            and currentRobloxGui:FindFirstChild("NotificationFrame")
-
-        if currentNotificationFrame then
-
-            for _, descendant in ipairs(currentNotificationFrame:GetDescendants()) do
-
-                if TryAcceptHolyFriendNotification(descendant) then
-                    break
-                end
+            if TryAcceptHolyFriendNotification(descendant) then
+                break
             end
         end
     end)
@@ -34671,18 +34757,6 @@ Tabs = {
         Icon = "gift",
         Description = "Move filtered pets to alts using trade automation.",
     }),
-    AgeBreaker = Window:AddTab({
-        Name = "Age Break",
-        Icon = "dna",
-        Description = "Safely age break pets using BaseWeight filters, sacrifice rules, and machine tracking.",
-    }),
-
-    Events = Window:AddTab({
-        Name = "Events",
-        Icon = "calendar",
-        Description = "Event shop automation and limited-time systems.",
-    }),
-
     Visuals = Window:AddTab({
         Name = "Visuals",
         Icon = "eye",
@@ -34895,14 +34969,6 @@ function BuildGardenModeTradeTabs()
         "tag"
     )
 
-    if not EventsBox then
-
-        AddGardenModePlaceholder(
-            Tabs.Events,
-            "Events",
-            "calendar"
-        )
-    end
 end
 
 HolyLoading:SetCurrentStep(3)
@@ -35669,7 +35735,7 @@ end
 
 EventsBox = nil
 
-if IsTradeWorld() then
+if false and IsTradeWorld() then
 
     if type(Tabs.Events.AddLeftCollapsibleGroupbox) == "function" then
 
@@ -35699,7 +35765,7 @@ end
 
 AutoAscensionBox = nil
 
-if IsGardenWorld() then
+if false and IsGardenWorld() then
 
     if type(Tabs.Events.AddLeftCollapsibleGroupbox) == "function" then
 
@@ -37456,43 +37522,6 @@ and type(RefreshSniperMonitorHUD) == "function" then
 end
 end)
 
-local AgeBreakerHUDToggle =
-    VisualBox:AddToggle(
-        "AgeBreakerHUD",
-        {
-            Text = "🧬 Age Breaker HUD",
-            Default = false,
-            Tooltip = "Shows Age Breaker timer, target progress, sacrifices left, and next action on-screen.",
-        }
-    )
-
-AgeBreakerHUDToggle:OnChanged(function(v)
-
-    VisualState.AgeBreakerHUD =
-        v == true
-
-    MarkConfigDirty()
-
-    if not AgeBreakerHUDGui
-    and type(CreateAgeBreakerHUD) == "function" then
-        CreateAgeBreakerHUD()
-    end
-
-    if AgeBreakerHUDGui then
-        AgeBreakerHUDGui.Enabled =
-            v == true
-    end
-
-    if AgeBreakerHUDFrame then
-        AgeBreakerHUDFrame.Visible =
-            v == true
-    end
-
-    if v == true
-    and type(RefreshAgeBreakerHUD) == "function" then
-        RefreshAgeBreakerHUD()
-    end
-end)
 --==================================================
 -- ACTIVE WATCHLIST HUD
 --==================================================
@@ -50861,7 +50890,7 @@ BoothPromoteBox:AddLabel(
 
 RefreshCustomPromoteMessageInputs()
 
-do
+if EventsBox then
     RefreshBeeEggList()
 
     EventsBox:AddDropdown(
@@ -55431,7 +55460,23 @@ function ResolveWebhookRouteURL(route)
         return mainURL, "Main"
     end
 
-    return mainURL, "Main"
+    if mainURL ~= "" then
+        return mainURL, "Main"
+    end
+
+    local secondaryURL =
+        NormalizeWebhookURL(
+            WebhookState
+            and WebhookState.SecondaryURL
+        )
+
+    -- Booth-sale and other personal notifications should still work when
+    -- the user has configured only the secondary webhook URL.
+    if secondaryURL ~= "" then
+        return secondaryURL, "Secondary"
+    end
+
+    return "", "Main"
 end
 
 function CanSendWebhookToURL(url)
@@ -56046,7 +56091,8 @@ OwnBoothTracker = {
     SaleTokenCheckpoint = 0,
 
     ConfirmDelay = 1.75,
-    MaxConfirmDelay = 12,
+    -- Token replication can arrive several seconds after the listing update.
+    MaxConfirmDelay = 30,
 
     ScanInterval = 0.35,
 
@@ -56109,6 +56155,85 @@ function ResolveBoothNetTokens(grossPrice)
     )
 end
 
+function ResolveOwnBoothPlayerData(data, boothData, localUserId)
+
+    if type(data) ~= "table"
+    or type(data.Players) ~= "table"
+    or type(boothData) ~= "table" then
+        return nil
+    end
+
+    localUserId =
+        tonumber(localUserId)
+
+    if not localUserId then
+        return nil
+    end
+
+    local owner =
+        boothData.Owner
+        or boothData.UserId
+        or boothData.Player
+        or boothData.PlayerId
+
+    local function ResolveUserId(value)
+
+        if type(value) == "number" then
+            return math.floor(value)
+        end
+
+        if type(value) == "table" then
+            return ResolveUserId(
+                value.UserId
+                or value.UserID
+                or value.PlayerId
+                or value.Id
+            )
+        end
+
+        local ok, instanceUserId =
+            pcall(function()
+                return value.UserId
+            end)
+
+        if ok
+        and tonumber(instanceUserId) then
+            return math.floor(tonumber(instanceUserId))
+        end
+
+        local text =
+            tostring(value or "")
+
+        return tonumber(text)
+            or tonumber(text:match("_(%d+)$"))
+    end
+
+    if ResolveUserId(owner) ~= localUserId then
+        return nil
+    end
+
+    if type(data.Players[owner]) == "table" then
+        return data.Players[owner]
+    end
+
+    local ownerText =
+        tostring(owner or "")
+
+    if type(data.Players[ownerText]) == "table" then
+        return data.Players[ownerText]
+    end
+
+    for playerKey, playerData in pairs(data.Players) do
+
+        if type(playerData) == "table"
+        and ResolveUserId(playerKey) == localUserId then
+            return playerData
+        end
+    end
+
+    return nil
+end
+
 function BuildOwnListingSnapshot()
 
     local snapshot = {}
@@ -56126,26 +56251,18 @@ function BuildOwnListingSnapshot()
 
     for boothId, boothData in pairs(data.Booths) do
 
-        local owner =
-            boothData.Owner
-
-        if not owner then
-            continue
-        end
-
-        local ownerId =
-            tonumber(
-                tostring(owner):match("_(%d+)$")
-            )
-
-        if ownerId ~= localUserId then
+        if type(boothData) ~= "table" then
             continue
         end
 
         local playerData =
-            data.Players[owner]
+            ResolveOwnBoothPlayerData(
+                data,
+                boothData,
+                localUserId
+            )
 
-        if not playerData then
+        if type(playerData) ~= "table" then
             continue
         end
 
@@ -56168,17 +56285,29 @@ function BuildOwnListingSnapshot()
 
             local item =
                 items[listingData.ItemId]
+                or items[tostring(listingData.ItemId)]
 
             if not item then
+
+                for itemId, candidate in pairs(items) do
+
+                    if tostring(itemId) == tostring(listingData.ItemId) then
+                        item = candidate
+                        break
+                    end
+                end
+            end
+
+            if type(item) ~= "table" then
                 continue
             end
 
             local petData =
                 item.PetData
-
-            if not petData then
-                continue
-            end
+                or item.Pet
+                or item.Data
+                or listingData.PetData
+                or {}
 
 local itemUUID =
     tostring(
@@ -56188,7 +56317,13 @@ local itemUUID =
     )
 
 local rawPetName =
-    tostring(item.PetType or "Unknown")
+    tostring(
+        item.PetType
+        or item.PetName
+        or listingData.PetType
+        or listingData.PetName
+        or "Unknown"
+    )
 
 local listedMetadata =
     ResolveOwnListedMetadata(
@@ -56415,7 +56550,8 @@ function FireConfirmedBoothSale(oldListing)
     if WebhookState.Enabled
     and WebhookState.NotifyBoothSales then
 
-        QueueWebhook(
+        local queued =
+            QueueWebhook(
             ApplyWebhookPing(
                 CreateBoothSaleEmbed(oldListing),
                 WebhookState.PingBoothSales
@@ -56423,7 +56559,17 @@ function FireConfirmedBoothSale(oldListing)
             WebhookState.BoothSalesRoute
         )
 
-        print("[WEBHOOK] Booth sale queued")
+        if queued then
+            print("[WEBHOOK] Booth sale queued")
+        else
+            warn(
+                "[WEBHOOK] Booth sale was confirmed but could not be queued. Check Webhook Enabled and the configured webhook URL."
+            )
+        end
+    else
+        warn(
+            "[WEBHOOK] Booth sale was confirmed but personal booth-sale webhooks are disabled."
+        )
     end
 end
 
@@ -59757,24 +59903,6 @@ function BuildWebhookTab()
         MarkConfigDirty()
     end)
 
-    local AgeBreaksToggle =
-        WebhookDependencyBox:AddToggle(
-            "WebhookAgeBreaks",
-            {
-                Text = "🌟 Age Breaks",
-                Tooltip = "Send a webhook when Holy claims an Age Breaker pet.",
-                Default = WebhookState.NotifyAgeBreaks == true,
-            }
-        )
-
-    AgeBreaksToggle:OnChanged(function(v)
-
-        WebhookState.NotifyAgeBreaks =
-            v == true
-
-        MarkConfigDirty()
-    end)
-
     local ErrorToggle =
         WebhookDependencyBox:AddToggle(
             "WebhookErrors",
@@ -59836,25 +59964,6 @@ function BuildWebhookTab()
     PingBoothSalesInput:OnChanged(function(v)
 
         WebhookState.PingBoothSales =
-            tostring(v or "")
-
-        MarkConfigDirty()
-    end)
-
-    local PingAgeBreaksInput =
-        WebhookDependencyBox:AddInput(
-            "WebhookPingAgeBreaks",
-            {
-                Text = "🌟 Age Break Ping",
-                Placeholder = "@everyone | @here | <@userid> | empty = no ping",
-                Numeric = false,
-                Finished = false,
-            }
-        )
-
-    PingAgeBreaksInput:OnChanged(function(v)
-
-        WebhookState.PingAgeBreaks =
             tostring(v or "")
 
         MarkConfigDirty()
@@ -59987,31 +60096,6 @@ function BuildWebhookTab()
     BoothRouteDropdown:OnChanged(function(v)
 
         WebhookState.BoothSalesRoute =
-            NormalizeWebhookRoute(v)
-
-        MarkConfigDirty()
-    end)
-
-    local AgeBreakRouteDropdown =
-        WebhookDependencyBox:AddDropdown(
-            "WebhookAgeBreaksRoute",
-            {
-                Text = "🌟 Age Break Route",
-                Tooltip = "Choose which webhook URL Age Break logs use.",
-                Values = WebhookRouteOptions,
-                Default =
-                    NormalizeWebhookRoute(
-                        WebhookState.AgeBreaksRoute
-                        or "Secondary"
-                    ),
-                Multi = false,
-                Searchable = false,
-            }
-        )
-
-    AgeBreakRouteDropdown:OnChanged(function(v)
-
-        WebhookState.AgeBreaksRoute =
             NormalizeWebhookRoute(v)
 
         MarkConfigDirty()
@@ -61757,17 +61841,6 @@ SaveManager:SetIgnoreIndexes({
     -- IMPORTANT: this must match the Obsidian option index, not the Lua state field.
     "Auto Trade World",
 
-    -- Age Breaker standalone save.
-    "AgeBreakerEnabled",
-    "AgeBreakerGoalLevel",
-
-    "AgeBreakerAutoTeleportWhenReady",
-    "AgeBreakerAutoClaimWhenReady",
-    "AgeBreakerAutoResubmitAfterClaim",
-    "AgeBreakerAutoTradeWorldWhenMachineStarts",
-
-    "AgeBreakerTargetMulti",
-    "AgeBreakerSacrificeMulti",
 })
 
 --==================================================
@@ -63219,75 +63292,6 @@ end
 
 StartCompactLeftGameButtonPatch()
 
---==================================================
--- REMOVE EVENT NOTIFY (PERSISTENT)
---==================================================
-
-task.spawn(function()
-    while IsCurrentRun() do
-        task.wait(0.5)
-
-        local playerGui =
-            Players.LocalPlayer:FindFirstChild("PlayerGui")
-
-        if not playerGui then
-            continue
-        end
-
-        local topbar =
-            playerGui:FindFirstChild("TopbarStandard")
-
-        if not topbar then
-            continue
-        end
-
-        local holders =
-            topbar:FindFirstChild("Holders")
-
-        if not holders then
-            continue
-        end
-
-        local right =
-            holders:FindFirstChild("Right")
-
-        if not right then
-            continue
-        end
-
-        local notify =
-            right:FindFirstChild("EVENT NOTIFY")
-
-        if notify then
-            notify.Visible = false
-            notify:Destroy()
-
-            print("[UI] EVENT NOTIFY removed")
-        end
-    end
-end)
-task.spawn(function()
-
-    while IsCurrentRun() do
-        task.wait(0.25)
-
-        if ScriptState.ForceStopped then
-            continue
-        end
-
-        if not IsTradeWorld() then
-    continue
-end
-
-if not BeeEggAuto.Enabled then
-    continue
-end
-
-pcall(function()
-    TryBuyBeeEgg()
-end)
-    end
-end)
 task.spawn(AutoServerHopWorker)
 task.spawn(BoothPositionWatchdog)
 
@@ -64329,11 +64333,6 @@ end
 BuildHolyTabStep(
     "Home",
     BuildHomeTab
-)
-
-BuildHolyTabStep(
-    "AgeBreaker",
-    BuildAgeBreakerTab
 )
 
 if IsTradeWorld() then
