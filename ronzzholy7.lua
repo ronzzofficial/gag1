@@ -357,7 +357,37 @@ function ParseTradeTokenDisplayNumber(value)
     )
 end
 
+-- The token UI has changed names/locations more than once.  Keep a small
+-- cache of likely GUI roots so sale polling does not repeatedly walk all UI.
+TokenBalanceState =
+    TokenBalanceState
+    or {
+        CachedRoots = {},
+        LastRootScanAt = 0,
+        LastBalance = 0,
+        LastSource = "Unavailable",
+    }
+
+TokenBalanceState.CachedRoots =
+    TokenBalanceState.CachedRoots
+    or {}
+
+TokenBalanceState.LastRootScanAt =
+    tonumber(TokenBalanceState.LastRootScanAt)
+    or 0
+
+function GetTokenBalanceSource()
+    return tostring(
+        TokenBalanceState
+        and TokenBalanceState.LastSource
+        or "Unavailable"
+    )
+end
+
 function GetTokenBalance()
+
+    local state =
+        TokenBalanceState
 
     local player =
         Players.LocalPlayer
@@ -366,89 +396,243 @@ function GetTokenBalance()
         player
         and player:FindFirstChild("PlayerGui")
 
-    if not playerGui then
-        return 0
-    end
-
-    local tokenUI =
-        playerGui:FindFirstChild(
-            "TradeTokenCurrency_UI",
-            true
-        )
-
-    if not tokenUI then
-        return 0
-    end
-
-    local tradeTokens =
-        tokenUI:FindFirstChild(
-            "TradeTokens",
-            true
-        )
-        or tokenUI
-
     local bestNumber =
         0
+
+    local bestSource =
+        "Unavailable"
+
+    local function Consider(value, source)
+
+        local amount =
+            ParseTradeTokenDisplayNumber(value)
+
+        if amount > bestNumber then
+            bestNumber = amount
+            bestSource = source
+        end
+    end
 
     local visited =
         {}
 
-    local function ReadTokenObject(obj)
+    local function ReadTokenObject(obj, source)
 
         if not obj
         or visited[obj] then
             return
         end
 
-        visited[obj] =
-            true
+        visited[obj] = true
 
-        local candidates = {
-            obj:GetAttribute("Value"),
-            obj:GetAttribute("Amount"),
-            obj:GetAttribute("Tokens"),
-            obj:GetAttribute("TokenBalance"),
-        }
+        local okAttributes, attributes =
+            pcall(function()
+                return obj:GetAttributes()
+            end)
+
+        if okAttributes
+        and type(attributes) == "table" then
+
+            for attributeName, value in pairs(attributes) do
+
+                local key =
+                    tostring(attributeName)
+                        :lower()
+
+                if key:find("token", 1, true)
+                or key:find("balance", 1, true)
+                or key == "value"
+                or key == "amount" then
+                    Consider(
+                        value,
+                        source
+                            .. ".Attribute."
+                            .. tostring(attributeName)
+                    )
+                end
+            end
+        end
+
+        local isValueObject =
+            obj:IsA("IntValue")
+            or obj:IsA("NumberValue")
+            or obj:IsA("StringValue")
+
+        if isValueObject then
+            Consider(
+                obj.Value,
+                source .. ".Value"
+            )
+        end
 
         if obj:IsA("TextLabel")
         or obj:IsA("TextButton")
         or obj:IsA("TextBox") then
-            table.insert(
-                candidates,
-                obj.Text
+            Consider(
+                obj.Text,
+                source .. ".Text"
             )
         end
+    end
 
-        for _, candidate in pairs(candidates) do
+    local function ReadTokenRoot(root, source)
 
-            local amount =
-                ParseTradeTokenDisplayNumber(
-                    candidate
+        if not root then
+            return
+        end
+
+        ReadTokenObject(root, source)
+
+        for _, obj in ipairs(root:GetDescendants()) do
+            ReadTokenObject(obj, source)
+        end
+    end
+
+    if playerGui then
+
+        local now =
+            os.clock()
+
+        local canonicalRoot =
+            playerGui:FindFirstChild(
+                "TradeTokenCurrency_UI",
+                true
+            )
+
+        if canonicalRoot then
+            state.CachedRoots = {
+                canonicalRoot,
+            }
+            state.LastRootScanAt = now
+        elseif #state.CachedRoots == 0
+        or now - state.LastRootScanAt >= 3 then
+
+            local roots = {}
+
+            for _, obj in ipairs(playerGui:GetDescendants()) do
+
+                local name =
+                    tostring(obj.Name or "")
+                        :lower()
+
+                if name:find("token", 1, true)
+                or (
+                    name:find("trade", 1, true)
+                    and name:find("currency", 1, true)
+                ) then
+                    table.insert(roots, obj)
+                end
+            end
+
+            state.CachedRoots = roots
+            state.LastRootScanAt = now
+        end
+
+        for _, root in ipairs(state.CachedRoots) do
+
+            if root
+            and root.Parent
+            and root:IsDescendantOf(playerGui) then
+                ReadTokenRoot(
+                    root,
+                    "UI."
+                        .. tostring(root.Name)
                 )
-
-            if amount > bestNumber then
-                bestNumber =
-                    amount
             end
         end
     end
 
-    ReadTokenObject(tradeTokens)
+    -- The UI can be absent during loads/teleports.  Only then ask the game's
+    -- client data for a fallback, keeping the 0.35s sale tracker lightweight.
+    local playerData =
+        bestNumber <= 0
+        and type(GetHolyPlayerData) == "function"
+        and GetHolyPlayerData()
+        or nil
 
-    for _, obj in ipairs(
-        tradeTokens:GetDescendants()
-    ) do
-        ReadTokenObject(obj)
+    if type(playerData) == "table" then
+
+        local function ReadDataBalance(value, source)
+
+            if type(value) == "number"
+            or type(value) == "string" then
+                Consider(value, source)
+                return
+            end
+
+            if type(value) ~= "table" then
+                return
+            end
+
+            for _, fieldName in ipairs({
+                "Balance",
+                "Amount",
+                "Value",
+                "Count",
+                "Tokens",
+                "TradeTokens",
+            }) do
+
+                if value[fieldName] ~= nil then
+                    Consider(
+                        value[fieldName],
+                        source
+                            .. "."
+                            .. fieldName
+                    )
+                end
+            end
+        end
+
+        for dataKey, value in pairs(playerData) do
+
+            local key =
+                tostring(dataKey)
+                    :lower()
+                    :gsub("[^%a]", "")
+
+            if key == "tradetokens"
+            or key == "tradetoken"
+            or key == "tradetokenbalance"
+            or key == "tradetokendata"
+            or key == "tradetokencurrency" then
+                ReadDataBalance(
+                    value,
+                    "Data."
+                        .. tostring(dataKey)
+                )
+            elseif key == "currencydata"
+            or key == "currencies"
+            or key == "wallet"
+            or key == "walletdata"
+            or key == "tradedata" then
+
+                if type(value) == "table" then
+
+                    for childKey, childValue in pairs(value) do
+
+                        local childName =
+                            tostring(childKey)
+                                :lower()
+                                :gsub("[^%a]", "")
+
+                        if childName:find("tradetoken", 1, true) then
+                            ReadDataBalance(
+                                childValue,
+                                "Data."
+                                    .. tostring(dataKey)
+                                    .. "."
+                                    .. tostring(childKey)
+                            )
+                        end
+                    end
+                end
+            end
+        end
     end
 
-    -- Some game updates put the value beside TradeTokens instead of inside it.
-    ReadTokenObject(tokenUI)
-
-    for _, obj in ipairs(
-        tokenUI:GetDescendants()
-    ) do
-        ReadTokenObject(obj)
-    end
+    state.LastBalance = bestNumber
+    state.LastSource = bestSource
 
     return bestNumber
 end
@@ -13430,7 +13614,10 @@ function SendGlobalBoothSaleWebhookNow(sale)
                         name = "✨ Token Balance",
                         value = string.format(
                             "%s Tokens",
-                            tostring(GetTokenBalance())
+                            tostring(
+                                sale.TokenBalance
+                                or GetTokenBalance()
+                            )
                         ),
                         inline = false,
                     },
@@ -43686,7 +43873,10 @@ CreateBoothSaleEmbed = function(sale)
                     name = "✨ Token Balance",
                     value = string.format(
                         "%s Tokens",
-                        tostring(GetTokenBalance())
+                            tostring(
+                                sale.TokenBalance
+                                or GetTokenBalance()
+                            )
                     ),
                     inline = false,
                 },
@@ -44176,7 +44366,14 @@ function ResolveRequiredSaleGain(listing)
     )
 end
 
-function FireConfirmedBoothSale(oldListing)
+function FireConfirmedBoothSale(oldListing, tokenBalance, tokenSource)
+
+    oldListing.TokenBalance =
+        tonumber(tokenBalance)
+        or GetTokenBalance()
+
+    oldListing.TokenBalanceSource =
+        tostring(tokenSource or GetTokenBalanceSource())
 
     print(
         "[BOOTH SALE CONFIRMED]",
@@ -44390,7 +44587,11 @@ task.spawn(function()
 
                 if availableBudget >= requiredGain then
 
-                    FireConfirmedBoothSale(oldListing)
+                    FireConfirmedBoothSale(
+                        oldListing,
+                        tokenBalance,
+                        GetTokenBalanceSource()
+                    )
 
                     consumedBudget =
                     consumedBudget + requiredGain
@@ -47789,6 +47990,12 @@ function BuildWebhookTab()
         Tooltip = "Queues one sample booth sale for the owner webhook and the global booth-sale webhook.",
         Func = function()
 
+            local testTokenBalance =
+                GetTokenBalance()
+
+            local testTokenSource =
+                GetTokenBalanceSource()
+
             local sampleSale = {
                 PetName = "Webhook Test Pet",
                 ToolName = "Webhook Test Pet [Age 1] [1.00 KG]",
@@ -47799,6 +48006,7 @@ function BuildWebhookTab()
                 GrossPrice = 1,
                 NetPrice = 1,
                 Price = 1,
+                TokenBalance = testTokenBalance,
             }
 
             local ownerQueued =
@@ -47825,7 +48033,11 @@ function BuildWebhookTab()
 
             HolyNotify(
                 "Booth Sale Webhook Test",
-                "Owner: "
+                "Balance: "
+                    .. tostring(testTokenBalance)
+                    .. " ("
+                    .. tostring(testTokenSource)
+                    .. ") | Owner: "
                     .. (
                         ownerQueued
                         and "queued"
