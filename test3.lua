@@ -9316,15 +9316,28 @@ function TransferConnectTradeWorker()
     local updateTradeState =
         TransferGetTradeRemote("UpdateTradeState")
 
-    if not updateTradeState
-    or not updateTradeState:IsA("RemoteEvent") then
+    local sendRequest =
+        TransferGetTradeRemote("SendRequest")
+
+    local hasTradeState =
+        updateTradeState
+        and updateTradeState:IsA("RemoteEvent")
+
+    local hasIncomingRequest =
+        sendRequest
+        and sendRequest:IsA("RemoteEvent")
+
+    if not hasTradeState
+    and not hasIncomingRequest then
         return false
     end
 
     TransferState.TradeWatcherConnected =
         true
 
-    updateTradeState.OnClientEvent:Connect(function(tradeId)
+    if hasTradeState then
+
+        updateTradeState.OnClientEvent:Connect(function(tradeId)
 
         if tradeId == nil then
 
@@ -9354,17 +9367,14 @@ function TransferConnectTradeWorker()
         if type(TransferStartAutoTradeDriver) == "function" then
             TransferStartAutoTradeDriver()
         end
-    end)
+        end)
+    end
 
-    local sendRequest =
-        TransferGetTradeRemote("SendRequest")
-
-    if sendRequest
-    and sendRequest:IsA("RemoteEvent") then
+    if hasIncomingRequest then
 
         sendRequest.OnClientEvent:Connect(function(requestId, senderPlayer)
 
-            if TransferState.AutoConfirmAccept ~= true then
+            if TransferGetRole() ~= "Receiver" then
                 return
             end
 
@@ -9512,6 +9522,62 @@ function TransferGetTradeButtonText()
     return ""
 end
 
+function TransferGetRole()
+
+    local targetName =
+        TransferCleanText(
+            TransferState.TargetPlayerName
+        )
+
+    if targetName == "" then
+        return "Idle"
+    end
+
+    if TransferMapIsEmpty(
+        TransferState.SelectedPets
+    ) then
+        return "Receiver"
+    end
+
+    return "Sender"
+end
+
+function TransferShouldAutoDriveTrade()
+
+    return TransferState.AutoConfirmAccept == true
+        or TransferGetRole() == "Receiver"
+end
+
+function TransferArmReceiverWorker()
+
+    if TransferGetRole() ~= "Receiver" then
+        return false
+    end
+
+    if not TransferConnectTradeWorker() then
+        TransferState.Status =
+            "Receiver Unavailable"
+
+        TransferState.LastResult =
+            "Trade request events were not found."
+
+        TransferRefreshStatus()
+
+        return false
+    end
+
+    TransferState.Status =
+        "Receiver Armed"
+
+    TransferState.LastResult =
+        "Waiting for a trade request from "
+        .. tostring(TransferState.TargetPlayerName)
+
+    TransferRefreshStatus()
+
+    return true
+end
+
 function TransferAutoAcceptIncomingRequest(requestId, senderPlayer)
 
     local requestKey =
@@ -9519,6 +9585,33 @@ function TransferAutoAcceptIncomingRequest(requestId, senderPlayer)
 
     if requestKey == ""
     or TransferState.IncomingRequestsHandled[requestKey] == true then
+        return false
+    end
+
+    if TransferGetRole() ~= "Receiver" then
+        return false
+    end
+
+    local expectedSender =
+        TransferCleanText(
+            TransferState.TargetPlayerName
+        )
+
+    local senderName =
+        senderPlayer
+        and tostring(senderPlayer.Name)
+        or ""
+
+    local senderDisplayName =
+        senderPlayer
+        and tostring(senderPlayer.DisplayName)
+        or ""
+
+    if expectedSender == ""
+    or (
+        senderName ~= expectedSender
+        and senderDisplayName ~= expectedSender
+    ) then
         return false
     end
 
@@ -9567,12 +9660,41 @@ function TransferAutoAcceptIncomingRequest(requestId, senderPlayer)
 
     TransferRefreshStatus()
 
+    -- Usually UpdateTradeState opens the driver immediately. This short GUI
+    -- probe covers the brief replication gap so the receiver still begins
+    -- auto-accepting before the ticket can expire.
+    task.spawn(function()
+
+        local started =
+            os.clock()
+
+        while IsCurrentRun()
+        and TransferGetRole() == "Receiver"
+        and os.clock() - started < 5 do
+
+            if TransferState.TradeOpen == true then
+                TransferStartAutoTradeDriver()
+                return
+            end
+
+            if TransferGetTradeButtonText() ~= "" then
+                TransferState.TradeOpen =
+                    true
+
+                TransferStartAutoTradeDriver()
+                return
+            end
+
+            task.wait(0.05)
+        end
+    end)
+
     return true
 end
 
 function TransferStartAutoTradeDriver()
 
-    if TransferState.AutoConfirmAccept ~= true
+    if TransferShouldAutoDriveTrade() ~= true
     or TransferState.TradeOpen ~= true
     or TransferState.AutoTradeDriverRunning == true then
         return
@@ -9590,7 +9712,7 @@ function TransferStartAutoTradeDriver()
             0
 
         while IsCurrentRun()
-        and TransferState.AutoConfirmAccept == true
+        and TransferShouldAutoDriveTrade() == true
         and TransferState.TradeOpen == true do
 
             local buttonText =
@@ -9880,6 +10002,10 @@ function TransferSendFilteredTrade()
 
     if TransferState.DryRun == true then
         return false, "Dry Run is ON. No trade was sent."
+    end
+
+    if TransferGetRole() == "Receiver" then
+        return false, "Receiver mode is active. Select at least one pet to send."
     end
 
     if TransferState.AutoConfirmAccept ~= true then
@@ -29645,7 +29771,11 @@ if Tabs.Transfer then
             TransferState.MaxPetsPerTrade
         )
 
-        TransferRefreshStatus()
+        if TransferGetRole() == "Receiver" then
+            TransferArmReceiverWorker()
+        else
+            TransferRefreshStatus()
+        end
 
         if type(MarkConfigDirty) == "function" then
             MarkConfigDirty()
@@ -29670,7 +29800,11 @@ if Tabs.Transfer then
                 TransferState.MaxPetsPerTrade
             )
 
-            TransferRefreshStatus()
+            if TransferGetRole() == "Receiver" then
+                TransferArmReceiverWorker()
+            else
+                TransferRefreshStatus()
+            end
         end,
     })
 
@@ -29859,7 +29993,7 @@ if Tabs.Transfer then
             math.clamp(
                 math.floor(
                     tonumber(value)
-                    or 6
+                    or 12
                 ),
                 1,
                 50
@@ -29901,7 +30035,11 @@ if Tabs.Transfer then
             and targetPlayer.UserId
             or 0
 
-        TransferRefreshStatus()
+        if TransferGetRole() == "Receiver" then
+            TransferArmReceiverWorker()
+        else
+            TransferRefreshStatus()
+        end
     end)
 
     TransferTargetBox:AddButton({
@@ -29917,7 +30055,7 @@ if Tabs.Transfer then
         "TransferAutoConfirmAccept",
         {
             Text = "Auto Confirm / Accept",
-            Tooltip = "On receiver: accepts every incoming trade ticket, then accepts and confirms the trade. Turn ON on both accounts before sending.",
+            Tooltip = "Target + no pets = receiver mode; it accepts and confirms trades from that target automatically. Target + pets = sender mode.",
             Default = false,
         }
     ):OnChanged(function(value)
@@ -29927,7 +30065,10 @@ if Tabs.Transfer then
 
         if TransferState.AutoConfirmAccept == true then
 
-            if TransferConnectTradeWorker() then
+            if TransferGetRole() == "Receiver" then
+                TransferArmReceiverWorker()
+
+            elseif TransferConnectTradeWorker() then
                 TransferState.Status =
                     "Auto Trade Armed"
 
@@ -29938,7 +30079,7 @@ if Tabs.Transfer then
                     "Auto Trade Unavailable"
 
                 TransferState.LastResult =
-                    "TradeEvents.UpdateTradeState was not found."
+                    "Trade request events were not found."
             end
 
             TransferRefreshStatus()
@@ -30031,7 +30172,11 @@ if Tabs.Transfer then
         TransferState.MaxPetsPerTrade
     )
 
-    TransferRefreshStatus()
+    if TransferGetRole() == "Receiver" then
+        TransferArmReceiverWorker()
+    else
+        TransferRefreshStatus()
+    end
 end
 --==================================================
 -- EVENTS TAB
