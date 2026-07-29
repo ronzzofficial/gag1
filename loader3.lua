@@ -28,7 +28,7 @@ local LocalPlayer =
 --==================================================
 
 local MAIN_URL =
-    "https://raw.githubusercontent.com/ronzzofficial/gag1/refs/heads/main/test2.lua?v="
+    "https://raw.githubusercontent.com/ronzzofficial/gag1/refs/heads/main/test3.lua?v="
     .. tostring(os.time())
 
 --==================================================
