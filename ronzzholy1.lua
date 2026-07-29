@@ -4442,6 +4442,8 @@ TransferState = {
 
     MaxPetsPerTrade = 12,
     AddPetDelay = 0.45,
+    SendQuantity = 0,
+    PlannedPetCount = 0,
 
     TargetPlayerName = "",
     TargetUserId = 0,
@@ -8886,7 +8888,8 @@ function TransferParseInventoryPet(tool)
     end
 
     local favorite =
-        tool:GetAttribute("IsFavorite") == true
+        tool:GetAttribute("d") == true
+        or tool:GetAttribute("IsFavorite") == true
         or tool:GetAttribute("Favorite") == true
         or tool:GetAttribute("Favorited") == true
 
@@ -9093,7 +9096,7 @@ function TransferRefreshStatus()
             "Last Result: "
                 .. tostring(TransferState.LastResult or "None")
                 .. " | Sent: "
-                .. tostring(TransferState.SentThisSession or 0)
+                .. TransferGetProgressText()
         )
     end
 end
@@ -9136,12 +9139,19 @@ function TransferPreview()
     local matches =
         TransferBuildMatchingPets()
 
+    local planned =
+        TransferResolveSendQuantity(
+            #matches
+        )
+
     TransferState.Status =
         "Preview"
 
     TransferState.LastResult =
         tostring(#matches)
-            .. " matching pet(s)."
+            .. " matching pet(s); "
+            .. tostring(planned)
+            .. " selected to send."
 
     print("========== HOLY TRANSFER PREVIEW ==========")
 
@@ -10011,6 +10021,168 @@ function TransferBuildRemainingMatches()
     return remaining
 end
 
+function TransferResolveSendQuantity(available)
+
+    available =
+        math.max(
+            0,
+            math.floor(tonumber(available) or 0)
+        )
+
+    local requested =
+        math.max(
+            0,
+            math.floor(
+                tonumber(TransferState.SendQuantity)
+                or 0
+            )
+        )
+
+    if requested <= 0 then
+        return available
+    end
+
+    return math.min(available, requested)
+end
+
+function TransferGetProgressText(sent)
+
+    sent =
+        math.max(
+            0,
+            math.floor(
+                tonumber(sent)
+                or tonumber(TransferState.SentThisSession)
+                or 0
+            )
+        )
+
+    local planned =
+        math.max(
+            0,
+            math.floor(
+                tonumber(TransferState.PlannedPetCount)
+                or 0
+            )
+        )
+
+    if planned <= 0 then
+        return tostring(sent)
+    end
+
+    return tostring(math.min(sent, planned))
+        .. "/"
+        .. tostring(planned)
+end
+
+function TransferToolIsFavorite(tool)
+
+    if not tool
+    or not tool:IsA("Tool") then
+        return false
+    end
+
+    return tool:GetAttribute("d") == true
+        or tool:GetAttribute("IsFavorite") == true
+        or tool:GetAttribute("Favorite") == true
+        or tool:GetAttribute("Favorited") == true
+end
+
+function TransferUnfavoritePetBeforeSending(pet)
+
+    if type(pet) ~= "table"
+    or not pet.Tool
+    or not pet.Tool:IsA("Tool") then
+        return false, "Pet tool missing."
+    end
+
+    if TransferToolIsFavorite(pet.Tool) ~= true then
+        pet.IsFavorite =
+            false
+
+        return true, "Not favorite."
+    end
+
+    local remote =
+        type(GetFavoriteRemote) == "function"
+        and GetFavoriteRemote()
+        or nil
+
+    if not remote
+    or not remote:IsA("RemoteEvent") then
+        return false, "Favorite_Item remote missing."
+    end
+
+    local ok, err =
+        pcall(function()
+            -- Favorite_Item toggles the Tool's favorite flag.
+            remote:FireServer(pet.Tool)
+        end)
+
+    if not ok then
+        return false, tostring(err)
+    end
+
+    local started =
+        os.clock()
+
+    while os.clock() - started < 3 do
+
+        if TransferToolIsFavorite(pet.Tool) ~= true then
+            pet.IsFavorite =
+                false
+
+            return true, "Unfavorited."
+        end
+
+        task.wait(0.1)
+    end
+
+    return false, "Timed out while unfavoriting " .. tostring(pet.PetName)
+end
+
+function TransferPrepareBatchFavorites(batch)
+
+    if TransferState.SkipFavorites == true then
+        return true
+    end
+
+    for index, pet in ipairs(batch or {}) do
+
+        if type(pet) == "table"
+        and (
+            pet.IsFavorite == true
+            or TransferToolIsFavorite(pet.Tool) == true
+        ) then
+            TransferState.Status =
+                "Unfavoriting Pets"
+
+            TransferState.LastResult =
+                "Batch "
+                .. tostring(TransferState.BatchNumber)
+                .. ": unfavoriting "
+                .. tostring(index)
+                .. "/"
+                .. tostring(#batch)
+                .. " | "
+                .. TransferGetProgressText()
+
+            TransferRefreshStatus()
+
+            local unfavorited, unfavoriteResult =
+                TransferUnfavoritePetBeforeSending(pet)
+
+            if not unfavorited then
+                return false, unfavoriteResult
+            end
+
+            task.wait(0.05)
+        end
+    end
+
+    return true
+end
+
 function TransferRunAutoConfirm()
 
     TransferStartAutoTradeDriver()
@@ -10056,6 +10228,13 @@ end
 
 function TransferSendOneTradeBatch(target, batch)
 
+    local favoritesPrepared, favoriteResult =
+        TransferPrepareBatchFavorites(batch)
+
+    if not favoritesPrepared then
+        return false, favoriteResult
+    end
+
     local equipped, equipResult =
         TransferEquipTradeTicket()
 
@@ -10083,7 +10262,8 @@ function TransferSendOneTradeBatch(target, batch)
         .. tostring(TransferState.BatchNumber)
         .. ": waiting for "
         .. tostring(target.Name)
-        .. " to accept."
+        .. " to accept | "
+        .. TransferGetProgressText()
 
     TransferRefreshStatus()
 
@@ -10121,6 +10301,11 @@ function TransferSendOneTradeBatch(target, batch)
             .. tostring(#batch)
             .. " "
             .. tostring(pet.PetName)
+            .. " | "
+            .. TransferGetProgressText(
+                (tonumber(TransferState.SentThisSession) or 0)
+                + index
+            )
 
         TransferRefreshStatus()
 
@@ -10181,6 +10366,9 @@ function TransferSendFilteredTrade()
     TransferState.SentThisSession =
         0
 
+    TransferState.PlannedPetCount =
+        0
+
     TransferState.BatchNumber =
         0
 
@@ -10229,7 +10417,12 @@ function TransferSendFilteredTrade()
         TransferBuildRemainingMatches()
 
     local totalToSend =
-        #startingMatches
+        TransferResolveSendQuantity(
+            #startingMatches
+        )
+
+    TransferState.PlannedPetCount =
+        totalToSend
 
     if totalToSend == 0 then
         return Finish(false, "Transfer Failed", "No owned pets match the selected filters.")
@@ -10255,23 +10448,39 @@ function TransferSendFilteredTrade()
         local remaining =
             TransferBuildRemainingMatches()
 
-        if #remaining == 0 then
+        local remainingToSend =
+            math.max(
+                0,
+                totalToSend
+                - (tonumber(TransferState.SentThisSession) or 0)
+            )
+
+        if remainingToSend == 0 then
             return Finish(
                 true,
                 "Transfer Complete",
                 "Transfer Complete: "
-                    .. tostring(TransferState.SentThisSession)
-                    .. "/"
-                    .. tostring(totalToSend)
+                    .. TransferGetProgressText()
                     .. " pets transferred in "
                     .. tostring(TransferState.BatchNumber)
                     .. " trade(s)."
             )
         end
 
+        if #remaining == 0 then
+            return Finish(
+                false,
+                "Transfer Stopped",
+                "Only "
+                    .. TransferGetProgressText()
+                    .. " pets remained available to transfer."
+            )
+        end
+
         local batchSize =
             math.min(
                 #remaining,
+                remainingToSend,
                 TransferGetTradeBatchLimit()
             )
 
@@ -10292,9 +10501,8 @@ function TransferSendFilteredTrade()
             .. tostring(TransferState.BatchNumber)
             .. ": "
             .. tostring(#batch)
-            .. " pets | "
-            .. tostring(#remaining)
-            .. " remaining."
+            .. " pets prepared | "
+            .. TransferGetProgressText()
 
         TransferRefreshStatus()
 
@@ -10317,6 +10525,17 @@ function TransferSendFilteredTrade()
 
             TransferState.ConsecutiveFailures =
                 0
+
+            TransferState.Status =
+                "Batch Complete"
+
+            TransferState.LastResult =
+                "Batch "
+                .. tostring(TransferState.BatchNumber)
+                .. " complete: "
+                .. TransferGetProgressText()
+
+            TransferRefreshStatus()
 
             task.wait(0.75)
 
@@ -30128,7 +30347,7 @@ if Tabs.Transfer then
         "TransferSkipFavorites",
         {
             Text = "Skip Favorites",
-            Tooltip = "Recommended ON.",
+            Tooltip = "ON excludes favorited pets. OFF unfavorites selected matching pets before each trade.",
             Default = true,
         }
     ):OnChanged(function(value)
@@ -30169,6 +30388,34 @@ if Tabs.Transfer then
         )
 
         TransferRefreshStatus()
+    end)
+
+    TransferSafetyBox:AddInput(
+        "TransferSendQuantity",
+        {
+            Text = "Pets To Send",
+            Default = "0",
+            Numeric = true,
+            Finished = true,
+            ClearTextOnFocus = false,
+            Tooltip = "Total matching pets to transfer. 0 = all matching pets.",
+        }
+    ):OnChanged(function(value)
+
+        TransferState.SendQuantity =
+            math.max(
+                0,
+                math.floor(
+                    tonumber(value)
+                    or 0
+                )
+            )
+
+        TransferRefreshStatus()
+
+        if type(MarkConfigDirty) == "function" then
+            MarkConfigDirty()
+        end
     end)
 
     local TransferTargetDropdown =
