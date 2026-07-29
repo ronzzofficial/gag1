@@ -4440,7 +4440,7 @@ TransferState = {
     MinBaseWeight = 0,
     MaxBaseWeight = 999,
 
-    MaxPetsPerTrade = 6,
+    MaxPetsPerTrade = 12,
     AddPetDelay = 0.45,
 
     TargetPlayerName = "",
@@ -4452,6 +4452,15 @@ TransferState = {
     TradeOpen = false,
     TradeId = "",
     TradeWatcherConnected = false,
+    AutoTradeDriverRunning = false,
+    IncomingRequestsHandled = {},
+    TradeClosedAt = 0,
+    TradeWasConfirmed = false,
+    ReceiverInventoryFull = false,
+    StopReason = "",
+    BatchNumber = 0,
+    ConsecutiveFailures = 0,
+    CompletedPetUUIDs = {},
 
     MatchedPets = {},
     SentThisSession = 0,
@@ -8995,15 +9004,22 @@ end
 
 function TransferBuildMatchingPets(limit)
 
-    limit =
-        math.clamp(
-            math.floor(
-                tonumber(limit)
-                or SafeNumber(TransferState.MaxPetsPerTrade, 6)
-            ),
-            1,
-            50
-        )
+    -- No limit means scan the entire inventory. The transfer worker passes a
+    -- per-trade limit explicitly, while Preview Matches uses the full count.
+    local maxMatches =
+        nil
+
+    if limit ~= nil then
+        maxMatches =
+            math.clamp(
+                math.floor(
+                    tonumber(limit)
+                    or SafeNumber(TransferState.MaxPetsPerTrade, 6)
+                ),
+                1,
+                50
+            )
+    end
 
     local matches = {}
 
@@ -9016,7 +9032,8 @@ function TransferBuildMatchingPets(limit)
                 pet
             )
 
-            if #matches >= limit then
+            if maxMatches
+            and #matches >= maxMatches then
                 break
             end
         end
@@ -9109,9 +9126,7 @@ end
 function TransferPreview()
 
     local matches =
-        TransferBuildMatchingPets(
-            TransferState.MaxPetsPerTrade
-        )
+        TransferBuildMatchingPets()
 
     TransferState.Status =
         "Preview"
@@ -9313,11 +9328,19 @@ function TransferConnectTradeWorker()
 
         if tradeId == nil then
 
+            local hadOpenTrade =
+                TransferState.TradeOpen == true
+
             TransferState.TradeOpen =
                 false
 
             TransferState.TradeId =
                 ""
+
+            if hadOpenTrade then
+                TransferState.TradeClosedAt =
+                    os.clock()
+            end
 
             return
         end
@@ -9327,7 +9350,91 @@ function TransferConnectTradeWorker()
 
         TransferState.TradeId =
             tostring(tradeId)
+
+        if type(TransferStartAutoTradeDriver) == "function" then
+            TransferStartAutoTradeDriver()
+        end
     end)
+
+    local sendRequest =
+        TransferGetTradeRemote("SendRequest")
+
+    if sendRequest
+    and sendRequest:IsA("RemoteEvent") then
+
+        sendRequest.OnClientEvent:Connect(function(requestId, senderPlayer)
+
+            if TransferState.AutoConfirmAccept ~= true then
+                return
+            end
+
+            task.spawn(function()
+
+                if type(TransferAutoAcceptIncomingRequest) == "function" then
+                    TransferAutoAcceptIncomingRequest(
+                        requestId,
+                        senderPlayer
+                    )
+                end
+            end)
+        end)
+    end
+
+    local gameEvents =
+        ReplicatedStorage:FindFirstChild("GameEvents")
+
+    local notification =
+        gameEvents
+        and gameEvents:FindFirstChild("Notification")
+
+    if notification
+    and notification:IsA("RemoteEvent") then
+
+        notification.OnClientEvent:Connect(function(message)
+
+            local text =
+                tostring(message or "")
+
+            local lower =
+                text:lower()
+
+            if lower:find("inventory", 1, true)
+            and (
+                lower:find("full", 1, true)
+                or lower:find("maximum", 1, true)
+            ) then
+                TransferState.ReceiverInventoryFull =
+                    true
+
+                TransferState.StopReason =
+                    "Receiver Inventory Full"
+
+                TransferState.Status =
+                    "Receiver Inventory Full"
+
+                TransferState.LastResult =
+                    text
+
+                TransferRefreshStatus()
+
+            elseif lower:find("ticket", 1, true)
+            and (
+                lower:find("no ", 1, true)
+                or lower:find("not enough", 1, true)
+            ) then
+                TransferState.StopReason =
+                    "No Trade Tickets Remaining"
+
+                TransferState.Status =
+                    "No Trade Tickets Remaining"
+
+                TransferState.LastResult =
+                    text
+
+                TransferRefreshStatus()
+            end
+        end)
+    end
 
     return true
 end
@@ -9368,80 +9475,307 @@ function TransferAddPetToOpenTrade(pet)
     )
 end
 
-function TransferRunAutoConfirm()
+function TransferGetTradeButtonText()
 
-    if TransferState.AutoConfirmAccept ~= true then
-        return
+    local player =
+        Players.LocalPlayer
+
+    local playerGui =
+        player
+        and player:FindFirstChild("PlayerGui")
+
+    local tradingUI =
+        playerGui
+        and playerGui:FindFirstChild("TradingUI")
+
+    local liveTrade =
+        tradingUI
+        and tradingUI:FindFirstChild("LiveTrade")
+
+    local options =
+        liveTrade
+        and liveTrade:FindFirstChild("Options")
+
+    local accept =
+        options
+        and options:FindFirstChild("Accept")
+
+    local label =
+        accept
+        and accept:FindFirstChild("Label")
+
+    if label
+    and label:IsA("TextLabel") then
+        return TransferCleanText(label.Text)
     end
 
-    task.spawn(function()
-
-        task.wait(0.6)
-
-        if TransferState.TradeOpen == true then
-            TransferFireTradeRemote("Accept")
-        end
-
-        task.wait(1.5)
-
-        if TransferState.TradeOpen == true then
-            TransferFireTradeRemote("Confirm")
-        end
-    end)
+    return ""
 end
 
-function TransferSendFilteredTrade()
+function TransferAutoAcceptIncomingRequest(requestId, senderPlayer)
 
-    if TransferState.Busy == true then
-        return false, "A transfer is already running."
+    local requestKey =
+        tostring(requestId or "")
+
+    if requestKey == ""
+    or TransferState.IncomingRequestsHandled[requestKey] == true then
+        return false
     end
 
-    TransferState.Busy =
-        true
+    local responder =
+        TransferGetTradeRemote("RespondRequest")
 
-    local function Finish(success, result)
-
-        TransferState.Busy =
-            false
-
-        TransferState.Status =
-            success
-            and "Trade Ready"
-            or "Trade Failed"
-
+    if not responder
+    or not responder:IsA("RemoteEvent") then
         TransferState.LastResult =
-            tostring(result or "Unknown result.")
+            "Missing TradeEvents.RespondRequest."
 
         TransferRefreshStatus()
 
-        return success, result
+        return false
     end
 
-    local target =
-        TransferResolveTargetPlayer()
+    local ok, err =
+        pcall(function()
+            -- The game uses false to accept an incoming ticket.
+            responder:FireServer(requestId, false)
+        end)
 
-    if not target then
-        return Finish(false, "Choose a target player in this server.")
+    if not ok then
+        TransferState.LastResult =
+            "Could not accept incoming ticket: "
+            .. tostring(err)
+
+        TransferRefreshStatus()
+
+        return false
     end
 
-    if not TransferConnectTradeWorker() then
-        return Finish(false, "Trade worker could not find UpdateTradeState.")
-    end
+    TransferState.IncomingRequestsHandled[requestKey] =
+        true
 
-    local matches =
-        TransferBuildMatchingPets(
-            TransferState.MaxPetsPerTrade
+    TransferState.Status =
+        "Auto Accepted Ticket"
+
+    TransferState.LastResult =
+        "Accepted incoming trade from "
+        .. tostring(
+            senderPlayer
+            and senderPlayer.Name
+            or "player"
         )
 
-    if #matches == 0 then
-        return Finish(false, "No owned pets match the selected filters.")
+    TransferRefreshStatus()
+
+    return true
+end
+
+function TransferStartAutoTradeDriver()
+
+    if TransferState.AutoConfirmAccept ~= true
+    or TransferState.TradeOpen ~= true
+    or TransferState.AutoTradeDriverRunning == true then
+        return
     end
+
+    TransferState.AutoTradeDriverRunning =
+        true
+
+    task.spawn(function()
+
+        local lastAction =
+            ""
+
+        local lastActionAt =
+            0
+
+        while IsCurrentRun()
+        and TransferState.AutoConfirmAccept == true
+        and TransferState.TradeOpen == true do
+
+            local buttonText =
+                TransferGetTradeButtonText()
+
+            local now =
+                os.clock()
+
+            if buttonText == "Accept"
+            and (
+                lastAction ~= "Accept"
+                or now - lastActionAt >= 0.45
+            ) then
+
+                TransferFireTradeRemote("Accept")
+
+                lastAction =
+                    "Accept"
+
+                lastActionAt =
+                    now
+
+            elseif buttonText == "Confirm"
+            and (
+                lastAction ~= "Confirm"
+                or now - lastActionAt >= 0.45
+            ) then
+
+                TransferFireTradeRemote("Confirm")
+
+                TransferState.TradeWasConfirmed =
+                    true
+
+                lastAction =
+                    "Confirm"
+
+                lastActionAt =
+                    now
+            end
+
+            task.wait(0.12)
+        end
+
+        TransferState.AutoTradeDriverRunning =
+            false
+    end)
+end
+
+function TransferWaitForTradeClosed(timeout)
+
+    timeout =
+        tonumber(timeout)
+        or 60
+
+    local started =
+        os.clock()
+
+    while IsCurrentRun()
+    and os.clock() - started < timeout do
+
+        if TransferState.ReceiverInventoryFull == true then
+            return false, "Receiver Inventory Full"
+        end
+
+        if TransferState.TradeOpen ~= true
+        and TransferState.TradeClosedAt > 0 then
+            return true, "Trade closed."
+        end
+
+        task.wait(0.1)
+    end
+
+    return false, "Timed out waiting for the trade to complete."
+end
+
+function TransferBatchIsNoLongerOwned(batch)
+
+    local owned = {}
+
+    for _, pet in ipairs(TransferBuildInventoryPets()) do
+        owned[tostring(pet.UUID or "")] =
+            true
+    end
+
+    for _, pet in ipairs(batch or {}) do
+
+        if owned[tostring(pet.UUID or "")] == true then
+            return false
+        end
+    end
+
+    return true
+end
+
+function TransferWaitForBatchRemoval(batch, timeout)
+
+    timeout =
+        tonumber(timeout)
+        or 8
+
+    local started =
+        os.clock()
+
+    while IsCurrentRun()
+    and os.clock() - started < timeout do
+
+        if TransferBatchIsNoLongerOwned(batch) then
+            return true
+        end
+
+        task.wait(0.25)
+    end
+
+    return false
+end
+
+function TransferBuildRemainingMatches()
+
+    local remaining = {}
+
+    for _, pet in ipairs(TransferBuildMatchingPets()) do
+
+        if TransferState.CompletedPetUUIDs[
+            tostring(pet.UUID or "")
+        ] ~= true then
+            table.insert(remaining, pet)
+        end
+    end
+
+    TransferState.MatchedPets =
+        remaining
+
+    return remaining
+end
+
+function TransferRunAutoConfirm()
+
+    TransferStartAutoTradeDriver()
+end
+
+function TransferGetTradeBatchLimit()
+
+    local gameLimit =
+        12
+
+    local dataFolder =
+        ReplicatedStorage:FindFirstChild("Data")
+
+    local tradeData =
+        dataFolder
+        and dataFolder:FindFirstChild("TradeData")
+
+    if tradeData
+    and tradeData:IsA("ModuleScript") then
+
+        local ok, config =
+            pcall(function()
+                return require(tradeData)
+            end)
+
+        if ok
+        and type(config) == "table" then
+            gameLimit =
+                tonumber(config.ItemLimit)
+                or gameLimit
+        end
+    end
+
+    return math.clamp(
+        math.floor(
+            tonumber(TransferState.MaxPetsPerTrade)
+            or gameLimit
+        ),
+        1,
+        math.max(1, math.floor(gameLimit))
+    )
+end
+
+function TransferSendOneTradeBatch(target, batch)
 
     local equipped, equipResult =
         TransferEquipTradeTicket()
 
     if not equipped then
-        return Finish(false, equipResult)
+        return false, equipResult
     end
 
     TransferState.TradeOpen =
@@ -9450,11 +9784,21 @@ function TransferSendFilteredTrade()
     TransferState.TradeId =
         ""
 
+    TransferState.TradeClosedAt =
+        0
+
+    TransferState.TradeWasConfirmed =
+        false
+
     TransferState.Status =
         "Sending Ticket"
 
     TransferState.LastResult =
-        "Waiting for " .. tostring(target.Name) .. " to accept."
+        "Batch "
+        .. tostring(TransferState.BatchNumber)
+        .. ": waiting for "
+        .. tostring(target.Name)
+        .. " to accept."
 
     TransferRefreshStatus()
 
@@ -9465,51 +9809,44 @@ function TransferSendFilteredTrade()
         )
 
     if not requested then
-        return Finish(false, requestResult)
+        return false, requestResult
     end
 
     if not TransferWaitForTradeOpen(25) then
-        return Finish(false, "Target did not accept the trade ticket in time.")
+        return false, "Target did not accept the trade ticket in time."
     end
 
-    TransferState.Status =
-        "Adding Pets"
+    TransferStartAutoTradeDriver()
 
-    TransferRefreshStatus()
-
-    local added =
-        0
-
-    for index, pet in ipairs(matches) do
+    for index, pet in ipairs(batch) do
 
         if TransferState.TradeOpen ~= true then
-            return Finish(false, "The trade closed before all pets were added.")
+            return false, "The trade closed before all pets were added."
         end
 
-        local addedOk, addResult =
-            TransferAddPetToOpenTrade(pet)
-
-        if not addedOk then
-            return Finish(false, addResult)
-        end
-
-        added += 1
-
-        TransferState.SentThisSession =
-            (TransferState.SentThisSession or 0)
-            + 1
+        TransferState.Status =
+            "Adding Pets"
 
         TransferState.LastResult =
-            "Added "
+            "Batch "
+            .. tostring(TransferState.BatchNumber)
+            .. ": adding "
             .. tostring(index)
             .. "/"
-            .. tostring(#matches)
-            .. ": "
+            .. tostring(#batch)
+            .. " "
             .. tostring(pet.PetName)
 
         TransferRefreshStatus()
 
-        if index < #matches then
+        local added, addResult =
+            TransferAddPetToOpenTrade(pet)
+
+        if not added then
+            return false, addResult
+        end
+
+        if index < #batch then
             task.wait(
                 math.clamp(
                     tonumber(TransferState.AddPetDelay)
@@ -9521,13 +9858,218 @@ function TransferSendFilteredTrade()
         end
     end
 
-    TransferRunAutoConfirm()
+    local closed, closeResult =
+        TransferWaitForTradeClosed(60)
 
-    return Finish(
-        true,
-        tostring(added)
-            .. " pet(s) added to the open trade."
-    )
+    if not closed then
+        return false, closeResult
+    end
+
+    if not TransferWaitForBatchRemoval(batch, 8) then
+        return false, "Trade closed without transferring the offered pets."
+    end
+
+    return true, "Batch completed."
+end
+
+function TransferSendFilteredTrade()
+
+    if TransferState.Busy == true then
+        return false, "A transfer is already running."
+    end
+
+    if TransferState.DryRun == true then
+        return false, "Dry Run is ON. No trade was sent."
+    end
+
+    if TransferState.AutoConfirmAccept ~= true then
+        return false, "Enable Auto Confirm / Accept on the sender and receiver first."
+    end
+
+    TransferState.Busy =
+        true
+
+    TransferState.SentThisSession =
+        0
+
+    TransferState.BatchNumber =
+        0
+
+    TransferState.ConsecutiveFailures =
+        0
+
+    TransferState.CompletedPetUUIDs =
+        {}
+
+    TransferState.ReceiverInventoryFull =
+        false
+
+    TransferState.StopReason =
+        ""
+
+    local function Finish(success, status, result)
+
+        TransferState.Busy =
+            false
+
+        TransferState.Status =
+            tostring(status or "Stopped")
+
+        TransferState.LastResult =
+            tostring(result or "Unknown result.")
+
+        TransferRefreshStatus()
+
+        return success, TransferState.LastResult
+    end
+
+    local target =
+        TransferResolveTargetPlayer()
+
+    if not target then
+        return Finish(false, "Transfer Failed", "Choose a target player in this server.")
+    end
+
+    if not TransferConnectTradeWorker() then
+        return Finish(false, "Transfer Failed", "Trade worker could not find UpdateTradeState.")
+    end
+
+    local startingMatches =
+        TransferBuildRemainingMatches()
+
+    local totalToSend =
+        #startingMatches
+
+    if totalToSend == 0 then
+        return Finish(false, "Transfer Failed", "No owned pets match the selected filters.")
+    end
+
+    while IsCurrentRun() do
+
+        if TransferState.ReceiverInventoryFull == true then
+            return Finish(false, "Receiver Inventory Full", "Receiver Inventory Full")
+        end
+
+        if TransferState.StopReason == "No Trade Tickets Remaining" then
+            return Finish(false, "No Trade Tickets Remaining", "No Trade Tickets Remaining")
+        end
+
+        target =
+            TransferResolveTargetPlayer()
+
+        if not target then
+            return Finish(false, "Transfer Failed", "Target player left the server.")
+        end
+
+        local remaining =
+            TransferBuildRemainingMatches()
+
+        if #remaining == 0 then
+            return Finish(
+                true,
+                "Transfer Complete",
+                "Transfer Complete: "
+                    .. tostring(TransferState.SentThisSession)
+                    .. "/"
+                    .. tostring(totalToSend)
+                    .. " pets transferred in "
+                    .. tostring(TransferState.BatchNumber)
+                    .. " trade(s)."
+            )
+        end
+
+        local batchSize =
+            math.min(
+                #remaining,
+                TransferGetTradeBatchLimit()
+            )
+
+        local batch = {}
+
+        for index = 1, batchSize do
+            table.insert(batch, remaining[index])
+        end
+
+        TransferState.BatchNumber +=
+            1
+
+        TransferState.Status =
+            "Preparing Batch"
+
+        TransferState.LastResult =
+            "Batch "
+            .. tostring(TransferState.BatchNumber)
+            .. ": "
+            .. tostring(#batch)
+            .. " pets | "
+            .. tostring(#remaining)
+            .. " remaining."
+
+        TransferRefreshStatus()
+
+        local sent, sendResult =
+            TransferSendOneTradeBatch(
+                target,
+                batch
+            )
+
+        if sent then
+
+            for _, pet in ipairs(batch) do
+                TransferState.CompletedPetUUIDs[
+                    tostring(pet.UUID or "")
+                ] = true
+            end
+
+            TransferState.SentThisSession +=
+                #batch
+
+            TransferState.ConsecutiveFailures =
+                0
+
+            task.wait(0.75)
+
+        else
+
+            TransferState.ConsecutiveFailures +=
+                1
+
+            local reason =
+                tostring(sendResult or "Unknown trade error.")
+
+            if reason:find("No Trading Ticket", 1, true) then
+                return Finish(false, "No Trade Tickets Remaining", "No Trade Tickets Remaining")
+            end
+
+            if reason == "Receiver Inventory Full" then
+                return Finish(false, "Receiver Inventory Full", reason)
+            end
+
+            if TransferState.ConsecutiveFailures >= 3 then
+                return Finish(
+                    false,
+                    "Transfer Stopped",
+                    "Stopped after 3 failed trades: "
+                        .. reason
+                )
+            end
+
+            TransferState.Status =
+                "Retrying Batch"
+
+            TransferState.LastResult =
+                "Trade failed ("
+                .. tostring(TransferState.ConsecutiveFailures)
+                .. "/3): "
+                .. reason
+
+            TransferRefreshStatus()
+
+            task.wait(1)
+        end
+    end
+
+    return Finish(false, "Transfer Stopped", "Runtime stopped.")
 end
 
 function ResolveBestPet(targetPet)
@@ -29306,7 +29848,7 @@ if Tabs.Transfer then
         "TransferMaxPetsPerTrade",
         {
             Text = "Max Pets Per Trade",
-            Default = "6",
+            Default = "12",
             Numeric = true,
             Finished = true,
             ClearTextOnFocus = false,
@@ -29375,13 +29917,32 @@ if Tabs.Transfer then
         "TransferAutoConfirmAccept",
         {
             Text = "Auto Confirm / Accept",
-            Tooltip = "After pets are added, sends one Accept then Confirm request. Keep OFF to confirm manually.",
+            Tooltip = "On receiver: accepts every incoming trade ticket, then accepts and confirms the trade. Turn ON on both accounts before sending.",
             Default = false,
         }
     ):OnChanged(function(value)
 
         TransferState.AutoConfirmAccept =
             value == true
+
+        if TransferState.AutoConfirmAccept == true then
+
+            if TransferConnectTradeWorker() then
+                TransferState.Status =
+                    "Auto Trade Armed"
+
+                TransferState.LastResult =
+                    "Incoming trade tickets will be accepted automatically."
+            else
+                TransferState.Status =
+                    "Auto Trade Unavailable"
+
+                TransferState.LastResult =
+                    "TradeEvents.UpdateTradeState was not found."
+            end
+
+            TransferRefreshStatus()
+        end
     end)
 
     TransferActionsBox:AddButton({
