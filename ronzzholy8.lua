@@ -13513,16 +13513,98 @@ function ResolveBoothSaleWebhookTitle(sale)
         )
     )
 end
+--==================================================
+-- BOOTH SALE CONSOLE DIAGNOSTICS
+-- Keeps the latest events in memory and prints only useful state changes.
+-- Prefix: [BOOTH SALE DEBUG]
+--==================================================
+
+BoothSaleDiagnostics =
+    BoothSaleDiagnostics
+    or {
+        Events = {},
+        LastByKey = {},
+        MaxEvents = 40,
+    }
+
+BoothSaleDiagnostics.Events =
+    BoothSaleDiagnostics.Events
+    or {}
+
+BoothSaleDiagnostics.LastByKey =
+    BoothSaleDiagnostics.LastByKey
+    or {}
+
+function BoothSaleDebug(stage, detail, isProblem)
+
+    local diagnostics =
+        BoothSaleDiagnostics
+
+    local message =
+        "[BOOTH SALE DEBUG] "
+        .. tostring(stage or "Unknown")
+        .. " | "
+        .. tostring(detail or "")
+
+    table.insert(
+        diagnostics.Events,
+        {
+            At = os.clock(),
+            Stage = tostring(stage or "Unknown"),
+            Detail = tostring(detail or ""),
+            Problem = isProblem == true,
+        }
+    )
+
+    while #diagnostics.Events
+        > math.max(
+            1,
+            tonumber(diagnostics.MaxEvents)
+            or 40
+        ) do
+        table.remove(diagnostics.Events, 1)
+    end
+
+    if isProblem == true then
+        warn(message)
+    else
+        print(message)
+    end
+end
+
+function BoothSaleDebugThrottled(key, cooldown, stage, detail, isProblem)
+
+    local diagnostics =
+        BoothSaleDiagnostics
+
+    local now =
+        os.clock()
+
+    local last =
+        tonumber(diagnostics.LastByKey[key])
+        or 0
+
+    if now - last < (tonumber(cooldown) or 1) then
+        return
+    end
+
+    diagnostics.LastByKey[key] = now
+
+    BoothSaleDebug(stage, detail, isProblem)
+end
+
 function SendGlobalBoothSaleWebhookNow(sale)
 
     if not GlobalBoothSaleWebhook.Enabled then
         warn("[GLOBAL BOOTH WEBHOOK] Disabled")
+        BoothSaleDebug("Global blocked", "Global booth webhook is disabled", true)
         return false
     end
 
     if type(GlobalBoothSaleWebhook.URL) ~= "string"
     or GlobalBoothSaleWebhook.URL == "" then
         warn("[GLOBAL BOOTH WEBHOOK] Missing URL")
+        BoothSaleDebug("Global blocked", "Global webhook URL is missing", true)
         return false
     end
 
@@ -13538,6 +13620,7 @@ function SendGlobalBoothSaleWebhookNow(sale)
 
     if type(requestFunction) ~= "function" then
         warn("[GLOBAL BOOTH WEBHOOK] No request function available")
+        BoothSaleDebug("Global blocked", "No HTTP request function is available", true)
         return false
     end
 
@@ -13670,6 +13753,11 @@ function SendGlobalBoothSaleWebhookNow(sale)
                 "[GLOBAL BOOTH WEBHOOK] Request failed:",
                 tostring(response)
             )
+            BoothSaleDebug(
+                "Global request failed",
+                tostring(response),
+                true
+            )
             return false
         end
 
@@ -13689,6 +13777,15 @@ function SendGlobalBoothSaleWebhookNow(sale)
                     tostring(response.Body or response.body or "")
                 )
 
+                BoothSaleDebug(
+                    "Global HTTP rejected",
+                    "Status "
+                        .. tostring(statusCode)
+                        .. " | "
+                        .. tostring(response.Body or response.body or ""),
+                    true
+                )
+
                 return false
             end
         end
@@ -13696,6 +13793,11 @@ function SendGlobalBoothSaleWebhookNow(sale)
             print(
         "[GLOBAL BOOTH WEBHOOK] Sent booth sale:",
         toolTitle
+    )
+
+    BoothSaleDebug(
+        "Global sent",
+        tostring(toolTitle)
     )
 
     return true
@@ -13709,10 +13811,12 @@ end
 function QueueGlobalBoothSaleWebhook(sale)
 
     if not GlobalBoothSaleWebhook.Enabled then
+        BoothSaleDebug("Global not queued", "Global booth webhook is disabled", true)
         return false
     end
 
     if type(sale) ~= "table" then
+        BoothSaleDebug("Global not queued", "Sale payload is invalid", true)
         return false
     end
 
@@ -13726,6 +13830,13 @@ function QueueGlobalBoothSaleWebhook(sale)
         tostring(sale.ToolName or sale.PetName or "Unknown"),
         "| queue:",
         tostring(#GlobalBoothSaleWebhook.Queue)
+    )
+
+    BoothSaleDebug(
+        "Global queued",
+        tostring(sale.ToolName or sale.PetName or "Unknown")
+            .. " | queue="
+            .. tostring(#GlobalBoothSaleWebhook.Queue)
     )
 
     return true
@@ -13795,6 +13906,12 @@ task.spawn(function()
                 tostring(sent)
             )
 
+            BoothSaleDebug(
+                "Global worker error",
+                tostring(sent),
+                true
+            )
+
             sent =
                 false
         end
@@ -13850,6 +13967,17 @@ task.spawn(function()
                     tostring(maxAttempts)
                 )
 
+                BoothSaleDebug(
+                    "Global retry",
+                    tostring(attempts)
+                        .. "/"
+                        .. tostring(maxAttempts)
+                        .. " | after "
+                        .. tostring(retryDelay)
+                        .. "s",
+                    true
+                )
+
                 task.delay(retryDelay, function()
 
                     if IsCurrentRun()
@@ -13872,6 +14000,17 @@ task.spawn(function()
                         or "Unknown"
                     )
                 )
+
+                BoothSaleDebug(
+                    "Global dropped",
+                    tostring(
+                        sale.ToolName
+                        or sale.PetName
+                        or "Unknown"
+                    ),
+                    true
+                )
+
             end
         end
 
@@ -43390,6 +43529,9 @@ QueueWebhook = function(payload, routeOrURL)
         return false
     end
 
+    local isBoothSale =
+        payload.__BoothSale == true
+
     local targetURL =
         ""
 
@@ -43414,6 +43556,15 @@ QueueWebhook = function(payload, routeOrURL)
     end
 
     if not CanSendWebhookToURL(targetURL) then
+        if isBoothSale then
+            BoothSaleDebug(
+                "Owner not queued",
+                "Route "
+                    .. tostring(routeUsed)
+                    .. " has no valid URL or no HTTP request function",
+                true
+            )
+        end
         return false
     end
 
@@ -43437,6 +43588,16 @@ QueueWebhook = function(payload, routeOrURL)
         tostring(routeUsed)
     )
 
+    if isBoothSale then
+        BoothSaleDebug(
+            "Owner queued",
+            "Route "
+                .. tostring(routeUsed)
+                .. " | queue="
+                .. tostring(#WebhookState.Queue)
+        )
+    end
+
     return true
 end
 
@@ -43450,6 +43611,9 @@ function SendWebhook(payload)
         return false
     end
 
+    local isBoothSale =
+        payload.__BoothSale == true
+
     local targetURL =
         NormalizeWebhookURL(
             payload.__WebhookURL
@@ -43461,6 +43625,9 @@ function SendWebhook(payload)
 
     if targetURL == "" then
         warn("[Webhook] Send failed: missing target URL")
+        if isBoothSale then
+            BoothSaleDebug("Owner blocked", "Target URL is empty", true)
+        end
         return false
     end
 
@@ -43469,6 +43636,13 @@ function SendWebhook(payload)
 
     if not requestFunction then
         warn("[Webhook] Send failed: no request function available")
+        if isBoothSale then
+            BoothSaleDebug(
+                "Owner blocked",
+                "No HTTP request function is available",
+                true
+            )
+        end
         return false
     end
 
@@ -43483,6 +43657,9 @@ function SendWebhook(payload)
         nil
 
     sendPayload.__WebhookAttempts =
+        nil
+
+    sendPayload.__BoothSale =
         nil
 
     local body =
@@ -43508,6 +43685,13 @@ function SendWebhook(payload)
 
     if not ok then
         warn("[WEBHOOK] REQUEST FAILED:", response)
+        if isBoothSale then
+            BoothSaleDebug(
+                "Owner request failed",
+                tostring(response),
+                true
+            )
+        end
         return false
     end
 
@@ -43524,6 +43708,12 @@ function SendWebhook(payload)
         or statusCode == 204
         or statusCode == 202 then
             print("[WEBHOOK] Sent successfully:", tostring(statusCode))
+            if isBoothSale then
+                BoothSaleDebug(
+                    "Owner sent",
+                    "HTTP " .. tostring(statusCode)
+                )
+            end
             return true
         end
 
@@ -43533,10 +43723,27 @@ function SendWebhook(payload)
             tostring(response.Body or response.body or "")
         )
 
+        if isBoothSale then
+            BoothSaleDebug(
+                "Owner HTTP rejected",
+                "Status "
+                    .. tostring(statusCode)
+                    .. " | "
+                    .. tostring(response.Body or response.body or ""),
+                true
+            )
+        end
+
         return false
     end
 
     print("[WEBHOOK] Request completed")
+    if isBoothSale then
+        BoothSaleDebug(
+            "Owner sent",
+            "Request completed without a status table"
+        )
+    end
     return true
 end
 
@@ -43602,8 +43809,18 @@ task.spawn(function()
                     tostring(sent)
                 )
 
+                if type(payload) == "table"
+                and payload.__BoothSale == true then
+                    BoothSaleDebug(
+                        "Owner worker error",
+                        tostring(sent),
+                        true
+                    )
+                end
+
                 sent =
                     false
+
             end
 
             if sent ~= true
@@ -43638,6 +43855,17 @@ task.spawn(function()
                         "/ 3"
                     )
 
+                    if payload.__BoothSale == true then
+                        BoothSaleDebug(
+                            "Owner retry",
+                            tostring(attempts)
+                                .. "/3 | after "
+                                .. tostring(retryDelay)
+                                .. "s",
+                            true
+                        )
+                    end
+
                     task.delay(retryDelay, function()
 
                         if IsCurrentRun() then
@@ -43653,6 +43881,14 @@ task.spawn(function()
                     warn(
                         "[WEBHOOK] Dropped after 3 failed attempts."
                     )
+
+                    if payload.__BoothSale == true then
+                        BoothSaleDebug(
+                            "Owner dropped",
+                            "Webhook failed after 3 retries",
+                            true
+                        )
+                    end
                 end
             end
 
@@ -44400,20 +44636,57 @@ function FireConfirmedBoothSale(oldListing, tokenBalance, tokenSource)
         end)
     end
 
-    QueueGlobalBoothSaleWebhook(oldListing)
+    local globalQueued =
+        QueueGlobalBoothSaleWebhook(oldListing)
+
+    if globalQueued ~= true then
+        BoothSaleDebug(
+            "Global not queued",
+            "Sale confirmed but global queue rejected it",
+            true
+        )
+    end
 
     if WebhookState.Enabled
     and WebhookState.NotifyBoothSales then
 
-        QueueWebhook(
+        local ownerPayload =
             ApplyWebhookPing(
                 CreateBoothSaleEmbed(oldListing),
                 WebhookState.PingBoothSales
-            ),
-            WebhookState.BoothSalesRoute
-        )
+            )
 
-        print("[WEBHOOK] Booth sale queued")
+        ownerPayload.__BoothSale = true
+
+        local ownerQueued =
+            QueueWebhook(
+                ownerPayload,
+            WebhookState.BoothSalesRoute
+            )
+
+        if ownerQueued == true then
+            BoothSaleDebug(
+                "Owner queued",
+                "Route "
+                    .. tostring(WebhookState.BoothSalesRoute)
+            )
+        else
+            BoothSaleDebug(
+                "Owner not queued",
+                "Owner webhook URL/configuration rejected the sale",
+                true
+            )
+        end
+
+    else
+        BoothSaleDebug(
+            "Owner blocked",
+            "Webhook enabled="
+                .. tostring(WebhookState.Enabled == true)
+                .. " | Booth Sales enabled="
+                .. tostring(WebhookState.NotifyBoothSales == true),
+            true
+        )
     end
 end
 
@@ -44429,11 +44702,22 @@ task.spawn(function()
         local current =
             BuildOwnListingSnapshot()
 
+        local currentListingCount =
+            0
+
+        for _ in pairs(current) do
+            currentListingCount =
+                currentListingCount + 1
+        end
+
         local now =
             os.clock()
 
         local tokenBalance =
             GetTokenBalance()
+
+        local tokenSource =
+            GetTokenBalanceSource()
 
         -- First pass only initializes state.
         -- This prevents startup / teleport / booth-load false sales.
@@ -44451,7 +44735,34 @@ task.spawn(function()
             OwnBoothTracker.Initialized =
                 true
 
+            BoothSaleDebug(
+                "Tracker initialized",
+                "Own listings="
+                    .. tostring(currentListingCount)
+                    .. " | tokens="
+                    .. tostring(tokenBalance)
+                    .. " via "
+                    .. tostring(tokenSource)
+                    .. " | booth data="
+                    .. tostring(LatestBoothData ~= nil)
+            )
+
             continue
+        end
+
+        if currentListingCount <= 0 then
+            BoothSaleDebugThrottled(
+                "tracker-no-own-listings",
+                8,
+                "Tracker waiting",
+                "No own booth listings detected | booth data="
+                    .. tostring(LatestBoothData ~= nil)
+                    .. " | tokens="
+                    .. tostring(tokenBalance)
+                    .. " via "
+                    .. tostring(tokenSource),
+                false
+            )
         end
 
         local previous =
@@ -44482,6 +44793,15 @@ task.spawn(function()
                     "[BOOTH LISTING REMOVED/PENDING]",
                     oldListing.PetName
                 )
+
+                BoothSaleDebug(
+                    "Listing pending",
+                    tostring(oldListing.PetName)
+                        .. " | net="
+                        .. tostring(oldListing.NetPrice or oldListing.Price or 0)
+                        .. " | balance before="
+                        .. tostring(OwnBoothTracker.LastTokenBalance)
+                )
             end
         end
 
@@ -44497,6 +44817,12 @@ task.spawn(function()
 
             if current[listingKey] then
                 OwnBoothTracker.PendingMissing[listingKey] = nil
+
+                BoothSaleDebug(
+                    "Listing restored",
+                    tostring(listingKey)
+                        .. " | removal was not a sale"
+                )
             end
         end
 
@@ -44559,6 +44885,26 @@ task.spawn(function()
         local consumedBudget = 0
         local confirmedCount = 0
 
+        if #confirmBatch > 0
+        and tokenGainBudget <= 0 then
+            BoothSaleDebugThrottled(
+                "tracker-no-token-gain",
+                2,
+                "Sale waiting for token gain",
+                "Pending="
+                    .. tostring(#confirmBatch)
+                    .. " | balance="
+                    .. tostring(tokenBalance)
+                    .. " via "
+                    .. tostring(tokenSource)
+                    .. " | checkpoint="
+                    .. tostring(OwnBoothTracker.SaleTokenCheckpoint)
+                    .. " | delta="
+                    .. tostring(tokenGainBudget),
+                true
+            )
+        end
+
         if tokenGainBudget > 0
         and #confirmBatch > 0 then
 
@@ -44587,10 +44933,23 @@ task.spawn(function()
 
                 if availableBudget >= requiredGain then
 
+                    BoothSaleDebug(
+                        "Sale confirmed",
+                        tostring(oldListing.PetName)
+                            .. " | balance="
+                            .. tostring(tokenBalance)
+                            .. " via "
+                            .. tostring(tokenSource)
+                            .. " | gain="
+                            .. tostring(availableBudget)
+                            .. " | required="
+                            .. tostring(requiredGain)
+                    )
+
                     FireConfirmedBoothSale(
                         oldListing,
                         tokenBalance,
-                        GetTokenBalanceSource()
+                        tokenSource
                     )
 
                     consumedBudget =
@@ -44599,6 +44958,24 @@ task.spawn(function()
                     confirmedCount + 1
 
                     OwnBoothTracker.PendingMissing[listingKey] = nil
+
+                else
+                    BoothSaleDebugThrottled(
+                        "tracker-insufficient-"
+                            .. tostring(listingKey),
+                        2,
+                        "Sale waiting for enough tokens",
+                        tostring(oldListing.PetName)
+                            .. " | balance="
+                            .. tostring(tokenBalance)
+                            .. " via "
+                            .. tostring(tokenSource)
+                            .. " | available="
+                            .. tostring(availableBudget)
+                            .. " | required="
+                            .. tostring(requiredGain),
+                        true
+                    )
                 end
             end
         end
@@ -44636,6 +45013,24 @@ task.spawn(function()
                     oldListing
                     and oldListing.PetName
                     or tostring(listingKey)
+                )
+
+                BoothSaleDebug(
+                    "Sale not confirmed",
+                    tostring(
+                        oldListing
+                        and oldListing.PetName
+                        or listingKey
+                    )
+                        .. " | no matching token gain after "
+                        .. tostring(
+                            math.floor(elapsed * 10) / 10
+                        )
+                        .. "s | balance="
+                        .. tostring(tokenBalance)
+                        .. " via "
+                        .. tostring(tokenSource),
+                    true
                 )
 
                 OwnBoothTracker.PendingMissing[listingKey] = nil
@@ -50069,6 +50464,7 @@ end
                     "[LISTINGS] AutoList restore failed:",
                     tostring(restoreErr)
                 )
+
             end
 
         else
@@ -50449,6 +50845,7 @@ function EquipShowcasePet(force)
                     "[BoothPet] No matching listed showcase pet:",
                     targetPet
                 )
+
             end
 
             return
