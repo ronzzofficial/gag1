@@ -4452,8 +4452,16 @@ TransferState = {
     TradeOpen = false,
     TradeId = "",
     TradeWatcherConnected = false,
+    TradeStateWatcherConnected = false,
+    IncomingRequestWatcherConnected = false,
+    TradeNotificationWatcherConnected = false,
     AutoTradeDriverRunning = false,
     IncomingRequestsHandled = {},
+    IncomingRequestId = "",
+    IncomingRequestPlayerName = "",
+    IncomingRequestUserId = 0,
+    IncomingRequestAt = 0,
+    IncomingRequestAccepting = false,
     TradeClosedAt = 0,
     TradeWasConfirmed = false,
     ReceiverInventoryFull = false,
@@ -9309,10 +9317,6 @@ end
 
 function TransferConnectTradeWorker()
 
-    if TransferState.TradeWatcherConnected == true then
-        return true
-    end
-
     local updateTradeState =
         TransferGetTradeRemote("UpdateTradeState")
 
@@ -9327,15 +9331,8 @@ function TransferConnectTradeWorker()
         sendRequest
         and sendRequest:IsA("RemoteEvent")
 
-    if not hasTradeState
-    and not hasIncomingRequest then
-        return false
-    end
-
-    TransferState.TradeWatcherConnected =
-        true
-
-    if hasTradeState then
+    if hasTradeState
+    and TransferState.TradeStateWatcherConnected ~= true then
 
         updateTradeState.OnClientEvent:Connect(function(tradeId)
 
@@ -9368,27 +9365,31 @@ function TransferConnectTradeWorker()
             TransferStartAutoTradeDriver()
         end
         end)
+
+        TransferState.TradeStateWatcherConnected =
+            true
     end
 
-    if hasIncomingRequest then
+    if hasIncomingRequest
+    and TransferState.IncomingRequestWatcherConnected ~= true then
 
         sendRequest.OnClientEvent:Connect(function(requestId, senderPlayer)
 
-            if TransferGetRole() ~= "Receiver" then
-                return
+            if type(TransferRecordIncomingTradeRequest) == "function" then
+                TransferRecordIncomingTradeRequest(
+                    requestId,
+                    senderPlayer
+                )
             end
-
-            task.spawn(function()
-
-                if type(TransferAutoAcceptIncomingRequest) == "function" then
-                    TransferAutoAcceptIncomingRequest(
-                        requestId,
-                        senderPlayer
-                    )
-                end
-            end)
         end)
+
+        TransferState.IncomingRequestWatcherConnected =
+            true
     end
+
+    TransferState.TradeWatcherConnected =
+        TransferState.TradeStateWatcherConnected == true
+        or TransferState.IncomingRequestWatcherConnected == true
 
     local gameEvents =
         ReplicatedStorage:FindFirstChild("GameEvents")
@@ -9398,7 +9399,8 @@ function TransferConnectTradeWorker()
         and gameEvents:FindFirstChild("Notification")
 
     if notification
-    and notification:IsA("RemoteEvent") then
+    and notification:IsA("RemoteEvent")
+    and TransferState.TradeNotificationWatcherConnected ~= true then
 
         notification.OnClientEvent:Connect(function(message)
 
@@ -9444,9 +9446,12 @@ function TransferConnectTradeWorker()
                 TransferRefreshStatus()
             end
         end)
+
+        TransferState.TradeNotificationWatcherConnected =
+            true
     end
 
-    return true
+    return TransferState.TradeWatcherConnected == true
 end
 
 function TransferWaitForTradeOpen(timeout)
@@ -9545,7 +9550,6 @@ end
 function TransferShouldAutoDriveTrade()
 
     return TransferState.AutoConfirmAccept == true
-        or TransferGetRole() == "Receiver"
 end
 
 function TransferArmReceiverWorker()
@@ -9554,12 +9558,14 @@ function TransferArmReceiverWorker()
         return false
     end
 
-    if not TransferConnectTradeWorker() then
+    TransferConnectTradeWorker()
+
+    if TransferState.IncomingRequestWatcherConnected ~= true then
         TransferState.Status =
             "Receiver Unavailable"
 
         TransferState.LastResult =
-            "Trade request events were not found."
+            "TradeEvents.SendRequest was not found."
 
         TransferRefreshStatus()
 
@@ -9575,45 +9581,151 @@ function TransferArmReceiverWorker()
 
     TransferRefreshStatus()
 
+    if TransferState.AutoConfirmAccept == true
+    and TransferCleanText(TransferState.IncomingRequestId) ~= ""
+    and type(TransferAutoAcceptIncomingRequest) == "function" then
+
+        task.defer(function()
+            TransferAutoAcceptIncomingRequest()
+        end)
+    end
+
     return true
 end
 
-function TransferAutoAcceptIncomingRequest(requestId, senderPlayer)
+function TransferIncomingRequestMatchesTarget()
+
+    local targetUserId =
+        tonumber(TransferState.TargetUserId)
+        or 0
+
+    local senderUserId =
+        tonumber(TransferState.IncomingRequestUserId)
+        or 0
+
+    if targetUserId > 0 then
+        return senderUserId == targetUserId
+    end
+
+    local expectedName =
+        TransferCleanText(
+            TransferState.TargetPlayerName
+        ):lower()
+
+    local senderName =
+        TransferCleanText(
+            TransferState.IncomingRequestPlayerName
+        ):lower()
+
+    return expectedName ~= ""
+        and senderName == expectedName
+end
+
+function TransferRecordIncomingTradeRequest(requestId, senderPlayer)
 
     local requestKey =
-        tostring(requestId or "")
+        TransferCleanText(requestId)
 
     if requestKey == ""
     or TransferState.IncomingRequestsHandled[requestKey] == true then
         return false
     end
 
-    if TransferGetRole() ~= "Receiver" then
+    if typeof(senderPlayer) ~= "Instance"
+    or not senderPlayer:IsA("Player") then
         return false
     end
 
-    local expectedSender =
+    TransferState.IncomingRequestId =
+        requestKey
+
+    TransferState.IncomingRequestPlayerName =
+        tostring(senderPlayer.Name)
+
+    TransferState.IncomingRequestUserId =
+        tonumber(senderPlayer.UserId)
+        or 0
+
+    TransferState.IncomingRequestAt =
+        os.clock()
+
+    TransferState.Status =
+        "Ticket Received"
+
+    TransferState.LastResult =
+        "Trade ticket from "
+        .. tostring(senderPlayer.Name)
+
+    TransferRefreshStatus()
+
+    if TransferGetRole() == "Receiver"
+    and TransferState.AutoConfirmAccept == true then
+
+        task.defer(function()
+            TransferAutoAcceptIncomingRequest()
+        end)
+    end
+
+    return true
+end
+
+function TransferAutoAcceptIncomingRequest()
+
+    local requestId =
         TransferCleanText(
-            TransferState.TargetPlayerName
+            TransferState.IncomingRequestId
         )
 
-    local senderName =
-        senderPlayer
-        and tostring(senderPlayer.Name)
-        or ""
-
-    local senderDisplayName =
-        senderPlayer
-        and tostring(senderPlayer.DisplayName)
-        or ""
-
-    if expectedSender == ""
-    or (
-        senderName ~= expectedSender
-        and senderDisplayName ~= expectedSender
-    ) then
+    if requestId == ""
+    or TransferState.IncomingRequestsHandled[requestId] == true
+    or TransferState.IncomingRequestAccepting == true then
         return false
     end
+
+    if TransferState.AutoConfirmAccept ~= true
+    or TransferGetRole() ~= "Receiver" then
+        return false
+    end
+
+    if os.clock() - (tonumber(TransferState.IncomingRequestAt) or 0) > 30 then
+        TransferState.LastResult =
+            "Ignored an expired trade ticket."
+
+        TransferRefreshStatus()
+
+        return false
+    end
+
+    if TransferIncomingRequestMatchesTarget() ~= true then
+        TransferState.Status =
+            "Ignored Ticket"
+
+        TransferState.LastResult =
+            "Ticket sender does not match the selected target."
+
+        TransferRefreshStatus()
+
+        return false
+    end
+
+    TransferState.IncomingRequestAccepting =
+        true
+
+    -- Match the reference worker's next-tick response path. This gives the
+    -- client request state one scheduler tick to finish registering first.
+    task.wait()
+
+    if TransferCleanText(TransferState.IncomingRequestId) ~= requestId then
+        TransferState.IncomingRequestAccepting =
+            false
+
+        return false
+    end
+
+    local senderName =
+        TransferCleanText(
+            TransferState.IncomingRequestPlayerName
+        )
 
     local responder =
         TransferGetTradeRemote("RespondRequest")
@@ -9622,6 +9734,9 @@ function TransferAutoAcceptIncomingRequest(requestId, senderPlayer)
     or not responder:IsA("RemoteEvent") then
         TransferState.LastResult =
             "Missing TradeEvents.RespondRequest."
+
+        TransferState.IncomingRequestAccepting =
+            false
 
         TransferRefreshStatus()
 
@@ -9639,30 +9754,48 @@ function TransferAutoAcceptIncomingRequest(requestId, senderPlayer)
             "Could not accept incoming ticket: "
             .. tostring(err)
 
+        TransferState.IncomingRequestAccepting =
+            false
+
         TransferRefreshStatus()
 
         return false
     end
 
-    TransferState.IncomingRequestsHandled[requestKey] =
+    TransferState.IncomingRequestsHandled[requestId] =
         true
 
+    TransferState.IncomingRequestId =
+        ""
+
+    TransferState.IncomingRequestPlayerName =
+        ""
+
+    TransferState.IncomingRequestUserId =
+        0
+
+    TransferState.IncomingRequestAt =
+        0
+
+    TransferState.IncomingRequestAccepting =
+        false
+
     TransferState.Status =
-        "Auto Accepted Ticket"
+        "Ticket Response Sent"
 
     TransferState.LastResult =
-        "Accepted incoming trade from "
+        "Accept response sent for "
         .. tostring(
-            senderPlayer
-            and senderPlayer.Name
+            senderName ~= ""
+            and senderName
             or "player"
         )
 
     TransferRefreshStatus()
 
-    -- Usually UpdateTradeState opens the driver immediately. This short GUI
-    -- probe covers the brief replication gap so the receiver still begins
-    -- auto-accepting before the ticket can expire.
+    -- UpdateTradeState normally opens the driver immediately. The GUI probe
+    -- covers the replication gap and reports a real failure instead of
+    -- treating a successful local FireServer call as a completed acceptance.
     task.spawn(function()
 
         local started =
@@ -9670,9 +9803,18 @@ function TransferAutoAcceptIncomingRequest(requestId, senderPlayer)
 
         while IsCurrentRun()
         and TransferGetRole() == "Receiver"
-        and os.clock() - started < 5 do
+        and os.clock() - started < 25 do
 
             if TransferState.TradeOpen == true then
+                TransferState.Status =
+                    "Ticket Accepted"
+
+                TransferState.LastResult =
+                    "Trade opened with "
+                    .. tostring(senderName ~= "" and senderName or "player")
+
+                TransferRefreshStatus()
+
                 TransferStartAutoTradeDriver()
                 return
             end
@@ -9681,11 +9823,31 @@ function TransferAutoAcceptIncomingRequest(requestId, senderPlayer)
                 TransferState.TradeOpen =
                     true
 
+                TransferState.Status =
+                    "Ticket Accepted"
+
+                TransferState.LastResult =
+                    "Trade window opened with "
+                    .. tostring(senderName ~= "" and senderName or "player")
+
+                TransferRefreshStatus()
+
                 TransferStartAutoTradeDriver()
                 return
             end
 
             task.wait(0.05)
+        end
+
+        if TransferState.TradeOpen ~= true
+        and TransferGetRole() == "Receiver" then
+            TransferState.Status =
+                "Ticket Not Opened"
+
+            TransferState.LastResult =
+                "RespondRequest was sent, but the trade did not open."
+
+            TransferRefreshStatus()
         end
     end)
 
@@ -10056,7 +10218,9 @@ function TransferSendFilteredTrade()
         return Finish(false, "Transfer Failed", "Choose a target player in this server.")
     end
 
-    if not TransferConnectTradeWorker() then
+    TransferConnectTradeWorker()
+
+    if TransferState.TradeStateWatcherConnected ~= true then
         return Finish(false, "Transfer Failed", "Trade worker could not find UpdateTradeState.")
     end
 
