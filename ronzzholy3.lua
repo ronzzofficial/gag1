@@ -319,50 +319,135 @@ function GetController()
 end
 
 
+function ParseTradeTokenDisplayNumber(value)
+
+    local text =
+        tostring(value or "")
+            :gsub(",", "")
+            :gsub("%s+", "")
+            :upper()
+
+    local numberText, suffix =
+        text:match("([%d%.]+)([KMBT]?)")
+
+    local number =
+        tonumber(numberText)
+
+    if not number then
+        return 0
+    end
+
+    local multipliers = {
+        K = 1000,
+        M = 1000000,
+        B = 1000000000,
+        T = 1000000000000,
+    }
+
+    return math.max(
+        0,
+        math.floor(
+            number
+                * (
+                    multipliers[suffix]
+                    or 1
+                )
+                + 0.5
+        )
+    )
+end
+
 function GetTokenBalance()
 
+    local player =
+        Players.LocalPlayer
+
     local playerGui =
-        Players.LocalPlayer:FindFirstChild("PlayerGui")
+        player
+        and player:FindFirstChild("PlayerGui")
 
     if not playerGui then
         return 0
     end
 
     local tokenUI =
-        playerGui:FindFirstChild("TradeTokenCurrency_UI")
+        playerGui:FindFirstChild(
+            "TradeTokenCurrency_UI",
+            true
+        )
 
     if not tokenUI then
         return 0
     end
 
     local tradeTokens =
-        tokenUI:FindFirstChild("TradeTokens")
+        tokenUI:FindFirstChild(
+            "TradeTokens",
+            true
+        )
+        or tokenUI
 
-    if not tradeTokens then
-        return 0
-    end
+    local bestNumber =
+        0
 
-    local bestNumber = 0
+    local visited =
+        {}
 
-    for _, obj in ipairs(tradeTokens:GetDescendants()) do
+    local function ReadTokenObject(obj)
 
-        if obj:IsA("TextLabel") then
+        if not obj
+        or visited[obj] then
+            return
+        end
 
-            local text =
-                tostring(obj.Text)
+        visited[obj] =
+            true
 
-            local number =
-                text:gsub(",", "")
-                    :match("%d+")
+        local candidates = {
+            obj:GetAttribute("Value"),
+            obj:GetAttribute("Amount"),
+            obj:GetAttribute("Tokens"),
+            obj:GetAttribute("TokenBalance"),
+        }
 
-            number = tonumber(number)
+        if obj:IsA("TextLabel")
+        or obj:IsA("TextButton")
+        or obj:IsA("TextBox") then
+            table.insert(
+                candidates,
+                obj.Text
+            )
+        end
 
-            if number
-            and number > bestNumber then
+        for _, candidate in pairs(candidates) do
 
-                bestNumber = number
+            local amount =
+                ParseTradeTokenDisplayNumber(
+                    candidate
+                )
+
+            if amount > bestNumber then
+                bestNumber =
+                    amount
             end
         end
+    end
+
+    ReadTokenObject(tradeTokens)
+
+    for _, obj in ipairs(
+        tradeTokens:GetDescendants()
+    ) do
+        ReadTokenObject(obj)
+    end
+
+    -- Some game updates put the value beside TradeTokens instead of inside it.
+    ReadTokenObject(tokenUI)
+
+    for _, obj in ipairs(
+        tokenUI:GetDescendants()
+    ) do
+        ReadTokenObject(obj)
     end
 
     return bestNumber
@@ -24464,6 +24549,8 @@ function BuildGardenModeTradeTabs()
         "tag"
     )
 
+end
+
 HolyLoading:SetDescription("Building tabs...")
 
 --==================================================
@@ -25030,6 +25117,254 @@ SniperMonitorBuyWaitLabel = nil
 SniperMonitorLastPingText = "Ping: Unknown"
 SniperMonitorLastPingTextAt = 0
 SniperMonitorPingRefreshInterval = 1.25
+
+function BuildVisualTab()
+
+    if not Tabs
+    or not Tabs.Visuals then
+        return false
+    end
+
+    local visualBox
+
+    if type(Tabs.Visuals.AddLeftCollapsibleGroupbox) == "function" then
+
+        visualBox =
+            Tabs.Visuals:AddLeftCollapsibleGroupbox(
+                "Visual Settings",
+                "eye",
+                false
+            )
+
+    else
+
+        visualBox =
+            Tabs.Visuals:AddLeftGroupbox(
+                "Visual Settings",
+                "eye"
+            )
+    end
+
+    local function SaveVisualSetting()
+
+        if type(MarkConfigDirty) == "function" then
+            MarkConfigDirty()
+        end
+    end
+
+    local manualJoinToggle =
+        visualBox:AddToggle(
+            "ManualJoinHUD",
+            {
+                Text = "🪄 Manual Join HUD",
+                Default =
+                    VisualState
+                    and VisualState.ManualJoinHUD == true,
+                Tooltip = "Shows the floating join box for Garden and Trade World servers.",
+            }
+        )
+
+    ManualJoinHUDToggleRef =
+        manualJoinToggle
+
+    if type(manualJoinToggle.AddKeyPicker) == "function" then
+
+        pcall(function()
+            manualJoinToggle:AddKeyPicker(
+                "ManualJoinHUDKeybind",
+                {
+                    Text = "Manual Join HUD",
+                    Default = "J",
+                    Mode = "Toggle",
+                    SyncToggleState = true,
+                    NoUI = false,
+                }
+            )
+        end)
+    end
+
+    manualJoinToggle:OnChanged(function(enabled)
+
+        if VisualState then
+            VisualState.ManualJoinHUD =
+                enabled == true
+        end
+
+        if type(SetManualJoinHUDVisible) == "function" then
+            pcall(
+                SetManualJoinHUDVisible,
+                enabled == true
+            )
+        end
+
+        SaveVisualSetting()
+    end)
+
+    local watchlistToggle =
+        visualBox:AddToggle(
+            "WatchlistHUD",
+            {
+                Text = "🔫 Sniper Watchlist HUD",
+                Default =
+                    VisualState
+                    and VisualState.WatchlistHUD == true,
+            }
+        )
+
+    watchlistToggle:OnChanged(function(enabled)
+
+        VisualState.WatchlistHUD =
+            enabled == true
+
+        if not WatchlistHUDGui
+        and type(CreateWatchlistHUD) == "function" then
+            pcall(CreateWatchlistHUD)
+        end
+
+        if WatchlistHUDGui then
+            WatchlistHUDGui.Enabled =
+                enabled == true
+        end
+
+        if WatchlistHUDFrame then
+            WatchlistHUDFrame.Visible =
+                enabled == true
+        end
+
+        if enabled == true
+        and type(RefreshWatchlistHUD) == "function" then
+            pcall(RefreshWatchlistHUD)
+        end
+
+        SaveVisualSetting()
+    end)
+
+    local watchlistOneToggle =
+        visualBox:AddToggle(
+            "ShowWatchlist1HUD",
+            {
+                Text = "Show Watchlist 1",
+                Default =
+                    not VisualState
+                    or VisualState.ShowWatchlist1HUD ~= false,
+            }
+        )
+
+    watchlistOneToggle:OnChanged(function(enabled)
+
+        VisualState.ShowWatchlist1HUD =
+            enabled == true
+
+        if type(RefreshWatchlistHUD) == "function" then
+            pcall(RefreshWatchlistHUD)
+        end
+
+        SaveVisualSetting()
+    end)
+
+    local watchlistTwoToggle =
+        visualBox:AddToggle(
+            "ShowWatchlist2HUD",
+            {
+                Text = "Show Watchlist 2",
+                Default =
+                    not VisualState
+                    or VisualState.ShowWatchlist2HUD ~= false,
+            }
+        )
+
+    watchlistTwoToggle:OnChanged(function(enabled)
+
+        VisualState.ShowWatchlist2HUD =
+            enabled == true
+
+        if type(RefreshWatchlistHUD) == "function" then
+            pcall(RefreshWatchlistHUD)
+        end
+
+        SaveVisualSetting()
+    end)
+
+    local serverInfoToggle =
+        visualBox:AddToggle(
+            "ServerInfoHUD",
+            {
+                Text = "🖥️ Server Info HUD",
+                Default =
+                    VisualState
+                    and VisualState.ServerInfoHUD == true,
+            }
+        )
+
+    serverInfoToggle:OnChanged(function(enabled)
+
+        VisualState.ServerInfoHUD =
+            enabled == true
+
+        if not ServerInfoHUDGui
+        and type(CreateServerInfoHUD) == "function" then
+            pcall(CreateServerInfoHUD)
+        end
+
+        if ServerInfoHUDGui then
+            ServerInfoHUDGui.Enabled =
+                enabled == true
+        end
+
+        if ServerInfoHUDFrame then
+            ServerInfoHUDFrame.Visible =
+                enabled == true
+        end
+
+        if enabled == true
+        and type(RefreshServerInfoHUD) == "function" then
+            pcall(RefreshServerInfoHUD)
+        end
+
+        SaveVisualSetting()
+    end)
+
+    local sniperMonitorToggle =
+        visualBox:AddToggle(
+            "SniperMonitorHUD",
+            {
+                Text = "🎯 Sniper Monitor HUD",
+                Default =
+                    VisualState
+                    and VisualState.SniperMonitorHUD == true,
+            }
+        )
+
+    sniperMonitorToggle:OnChanged(function(enabled)
+
+        VisualState.SniperMonitorHUD =
+            enabled == true
+
+        if not SniperMonitorHUDGui
+        and type(CreateSniperMonitorHUD) == "function" then
+            pcall(CreateSniperMonitorHUD)
+        end
+
+        if SniperMonitorHUDGui then
+            SniperMonitorHUDGui.Enabled =
+                enabled == true
+        end
+
+        if SniperMonitorHUDFrame then
+            SniperMonitorHUDFrame.Visible =
+                enabled == true
+        end
+
+        if enabled == true
+        and type(RefreshSniperMonitorHUD) == "function" then
+            pcall(RefreshSniperMonitorHUD)
+        end
+
+        SaveVisualSetting()
+    end)
+
+    return true
+end
 
 --==================================================
 -- ACTIVE WATCHLIST HUD
@@ -47447,6 +47782,71 @@ function BuildWebhookTab()
         Text = "Tests",
         MarginTop = 10,
         MarginBottom = 8,
+    })
+
+    WebhookDependencyBox:AddButton({
+
+        Text = "🧪 Test Booth Sale Webhooks",
+        Tooltip = "Queues one sample booth sale for the owner webhook and the global booth-sale webhook.",
+        Func = function()
+
+            local sampleSale = {
+                PetName = "Webhook Test Pet",
+                ToolName = "Webhook Test Pet [Age 1] [1.00 KG]",
+                Age = 1,
+                MutationText = "Normal",
+                BaseWeight = 1,
+                DisplayWeight = 1,
+                GrossPrice = 1,
+                NetPrice = 1,
+                Price = 1,
+            }
+
+            local ownerQueued =
+                false
+
+            if WebhookState.Enabled
+            and WebhookState.NotifyBoothSales
+            and type(QueueWebhook) == "function"
+            and type(CreateBoothSaleEmbed) == "function" then
+
+                ownerQueued =
+                    QueueWebhook(
+                        ApplyWebhookPing(
+                            CreateBoothSaleEmbed(sampleSale),
+                            WebhookState.PingBoothSales
+                        ),
+                        WebhookState.BoothSalesRoute
+                    ) == true
+            end
+
+            local globalQueued =
+                type(QueueGlobalBoothSaleWebhook) == "function"
+                and QueueGlobalBoothSaleWebhook(sampleSale) == true
+
+            HolyNotify(
+                "Booth Sale Webhook Test",
+                "Owner: "
+                    .. (
+                        ownerQueued
+                        and "queued"
+                        or "not queued"
+                    )
+                    .. " | Global: "
+                    .. (
+                        globalQueued
+                        and "queued"
+                        or "not queued"
+                    ),
+                (
+                    ownerQueued
+                    or globalQueued
+                )
+                    and "check"
+                    or "triangle-alert",
+                5
+            )
+        end,
     })
 
     WebhookDependencyBox:AddButton({
