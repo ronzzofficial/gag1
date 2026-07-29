@@ -357,37 +357,7 @@ function ParseTradeTokenDisplayNumber(value)
     )
 end
 
--- The token UI has changed names/locations more than once.  Keep a small
--- cache of likely GUI roots so sale polling does not repeatedly walk all UI.
-TokenBalanceState =
-    TokenBalanceState
-    or {
-        CachedRoots = {},
-        LastRootScanAt = 0,
-        LastBalance = 0,
-        LastSource = "Unavailable",
-    }
-
-TokenBalanceState.CachedRoots =
-    TokenBalanceState.CachedRoots
-    or {}
-
-TokenBalanceState.LastRootScanAt =
-    tonumber(TokenBalanceState.LastRootScanAt)
-    or 0
-
-function GetTokenBalanceSource()
-    return tostring(
-        TokenBalanceState
-        and TokenBalanceState.LastSource
-        or "Unavailable"
-    )
-end
-
 function GetTokenBalance()
-
-    local state =
-        TokenBalanceState
 
     local player =
         Players.LocalPlayer
@@ -396,243 +366,89 @@ function GetTokenBalance()
         player
         and player:FindFirstChild("PlayerGui")
 
+    if not playerGui then
+        return 0
+    end
+
+    local tokenUI =
+        playerGui:FindFirstChild(
+            "TradeTokenCurrency_UI",
+            true
+        )
+
+    if not tokenUI then
+        return 0
+    end
+
+    local tradeTokens =
+        tokenUI:FindFirstChild(
+            "TradeTokens",
+            true
+        )
+        or tokenUI
+
     local bestNumber =
         0
-
-    local bestSource =
-        "Unavailable"
-
-    local function Consider(value, source)
-
-        local amount =
-            ParseTradeTokenDisplayNumber(value)
-
-        if amount > bestNumber then
-            bestNumber = amount
-            bestSource = source
-        end
-    end
 
     local visited =
         {}
 
-    local function ReadTokenObject(obj, source)
+    local function ReadTokenObject(obj)
 
         if not obj
         or visited[obj] then
             return
         end
 
-        visited[obj] = true
+        visited[obj] =
+            true
 
-        local okAttributes, attributes =
-            pcall(function()
-                return obj:GetAttributes()
-            end)
-
-        if okAttributes
-        and type(attributes) == "table" then
-
-            for attributeName, value in pairs(attributes) do
-
-                local key =
-                    tostring(attributeName)
-                        :lower()
-
-                if key:find("token", 1, true)
-                or key:find("balance", 1, true)
-                or key == "value"
-                or key == "amount" then
-                    Consider(
-                        value,
-                        source
-                            .. ".Attribute."
-                            .. tostring(attributeName)
-                    )
-                end
-            end
-        end
-
-        local isValueObject =
-            obj:IsA("IntValue")
-            or obj:IsA("NumberValue")
-            or obj:IsA("StringValue")
-
-        if isValueObject then
-            Consider(
-                obj.Value,
-                source .. ".Value"
-            )
-        end
+        local candidates = {
+            obj:GetAttribute("Value"),
+            obj:GetAttribute("Amount"),
+            obj:GetAttribute("Tokens"),
+            obj:GetAttribute("TokenBalance"),
+        }
 
         if obj:IsA("TextLabel")
         or obj:IsA("TextButton")
         or obj:IsA("TextBox") then
-            Consider(
-                obj.Text,
-                source .. ".Text"
+            table.insert(
+                candidates,
+                obj.Text
             )
         end
-    end
 
-    local function ReadTokenRoot(root, source)
+        for _, candidate in pairs(candidates) do
 
-        if not root then
-            return
-        end
-
-        ReadTokenObject(root, source)
-
-        for _, obj in ipairs(root:GetDescendants()) do
-            ReadTokenObject(obj, source)
-        end
-    end
-
-    if playerGui then
-
-        local now =
-            os.clock()
-
-        local canonicalRoot =
-            playerGui:FindFirstChild(
-                "TradeTokenCurrency_UI",
-                true
-            )
-
-        if canonicalRoot then
-            state.CachedRoots = {
-                canonicalRoot,
-            }
-            state.LastRootScanAt = now
-        elseif #state.CachedRoots == 0
-        or now - state.LastRootScanAt >= 3 then
-
-            local roots = {}
-
-            for _, obj in ipairs(playerGui:GetDescendants()) do
-
-                local name =
-                    tostring(obj.Name or "")
-                        :lower()
-
-                if name:find("token", 1, true)
-                or (
-                    name:find("trade", 1, true)
-                    and name:find("currency", 1, true)
-                ) then
-                    table.insert(roots, obj)
-                end
-            end
-
-            state.CachedRoots = roots
-            state.LastRootScanAt = now
-        end
-
-        for _, root in ipairs(state.CachedRoots) do
-
-            if root
-            and root.Parent
-            and root:IsDescendantOf(playerGui) then
-                ReadTokenRoot(
-                    root,
-                    "UI."
-                        .. tostring(root.Name)
+            local amount =
+                ParseTradeTokenDisplayNumber(
+                    candidate
                 )
+
+            if amount > bestNumber then
+                bestNumber =
+                    amount
             end
         end
     end
 
-    -- The UI can be absent during loads/teleports.  Only then ask the game's
-    -- client data for a fallback, keeping the 0.35s sale tracker lightweight.
-    local playerData =
-        bestNumber <= 0
-        and type(GetHolyPlayerData) == "function"
-        and GetHolyPlayerData()
-        or nil
+    ReadTokenObject(tradeTokens)
 
-    if type(playerData) == "table" then
-
-        local function ReadDataBalance(value, source)
-
-            if type(value) == "number"
-            or type(value) == "string" then
-                Consider(value, source)
-                return
-            end
-
-            if type(value) ~= "table" then
-                return
-            end
-
-            for _, fieldName in ipairs({
-                "Balance",
-                "Amount",
-                "Value",
-                "Count",
-                "Tokens",
-                "TradeTokens",
-            }) do
-
-                if value[fieldName] ~= nil then
-                    Consider(
-                        value[fieldName],
-                        source
-                            .. "."
-                            .. fieldName
-                    )
-                end
-            end
-        end
-
-        for dataKey, value in pairs(playerData) do
-
-            local key =
-                tostring(dataKey)
-                    :lower()
-                    :gsub("[^%a]", "")
-
-            if key == "tradetokens"
-            or key == "tradetoken"
-            or key == "tradetokenbalance"
-            or key == "tradetokendata"
-            or key == "tradetokencurrency" then
-                ReadDataBalance(
-                    value,
-                    "Data."
-                        .. tostring(dataKey)
-                )
-            elseif key == "currencydata"
-            or key == "currencies"
-            or key == "wallet"
-            or key == "walletdata"
-            or key == "tradedata" then
-
-                if type(value) == "table" then
-
-                    for childKey, childValue in pairs(value) do
-
-                        local childName =
-                            tostring(childKey)
-                                :lower()
-                                :gsub("[^%a]", "")
-
-                        if childName:find("tradetoken", 1, true) then
-                            ReadDataBalance(
-                                childValue,
-                                "Data."
-                                    .. tostring(dataKey)
-                                    .. "."
-                                    .. tostring(childKey)
-                            )
-                        end
-                    end
-                end
-            end
-        end
+    for _, obj in ipairs(
+        tradeTokens:GetDescendants()
+    ) do
+        ReadTokenObject(obj)
     end
 
-    state.LastBalance = bestNumber
-    state.LastSource = bestSource
+    -- Some game updates put the value beside TradeTokens instead of inside it.
+    ReadTokenObject(tokenUI)
+
+    for _, obj in ipairs(
+        tokenUI:GetDescendants()
+    ) do
+        ReadTokenObject(obj)
+    end
 
     return bestNumber
 end
@@ -13513,98 +13329,16 @@ function ResolveBoothSaleWebhookTitle(sale)
         )
     )
 end
---==================================================
--- BOOTH SALE CONSOLE DIAGNOSTICS
--- Keeps the latest events in memory and prints only useful state changes.
--- Prefix: [BOOTH SALE DEBUG]
---==================================================
-
-BoothSaleDiagnostics =
-    BoothSaleDiagnostics
-    or {
-        Events = {},
-        LastByKey = {},
-        MaxEvents = 40,
-    }
-
-BoothSaleDiagnostics.Events =
-    BoothSaleDiagnostics.Events
-    or {}
-
-BoothSaleDiagnostics.LastByKey =
-    BoothSaleDiagnostics.LastByKey
-    or {}
-
-function BoothSaleDebug(stage, detail, isProblem)
-
-    local diagnostics =
-        BoothSaleDiagnostics
-
-    local message =
-        "[BOOTH SALE DEBUG] "
-        .. tostring(stage or "Unknown")
-        .. " | "
-        .. tostring(detail or "")
-
-    table.insert(
-        diagnostics.Events,
-        {
-            At = os.clock(),
-            Stage = tostring(stage or "Unknown"),
-            Detail = tostring(detail or ""),
-            Problem = isProblem == true,
-        }
-    )
-
-    while #diagnostics.Events
-        > math.max(
-            1,
-            tonumber(diagnostics.MaxEvents)
-            or 40
-        ) do
-        table.remove(diagnostics.Events, 1)
-    end
-
-    if isProblem == true then
-        warn(message)
-    else
-        print(message)
-    end
-end
-
-function BoothSaleDebugThrottled(key, cooldown, stage, detail, isProblem)
-
-    local diagnostics =
-        BoothSaleDiagnostics
-
-    local now =
-        os.clock()
-
-    local last =
-        tonumber(diagnostics.LastByKey[key])
-        or 0
-
-    if now - last < (tonumber(cooldown) or 1) then
-        return
-    end
-
-    diagnostics.LastByKey[key] = now
-
-    BoothSaleDebug(stage, detail, isProblem)
-end
-
 function SendGlobalBoothSaleWebhookNow(sale)
 
     if not GlobalBoothSaleWebhook.Enabled then
         warn("[GLOBAL BOOTH WEBHOOK] Disabled")
-        BoothSaleDebug("Global blocked", "Global booth webhook is disabled", true)
         return false
     end
 
     if type(GlobalBoothSaleWebhook.URL) ~= "string"
     or GlobalBoothSaleWebhook.URL == "" then
         warn("[GLOBAL BOOTH WEBHOOK] Missing URL")
-        BoothSaleDebug("Global blocked", "Global webhook URL is missing", true)
         return false
     end
 
@@ -13620,7 +13354,6 @@ function SendGlobalBoothSaleWebhookNow(sale)
 
     if type(requestFunction) ~= "function" then
         warn("[GLOBAL BOOTH WEBHOOK] No request function available")
-        BoothSaleDebug("Global blocked", "No HTTP request function is available", true)
         return false
     end
 
@@ -13697,10 +13430,7 @@ function SendGlobalBoothSaleWebhookNow(sale)
                         name = "✨ Token Balance",
                         value = string.format(
                             "%s Tokens",
-                            tostring(
-                                sale.TokenBalance
-                                or GetTokenBalance()
-                            )
+                            tostring(GetTokenBalance())
                         ),
                         inline = false,
                     },
@@ -13753,11 +13483,6 @@ function SendGlobalBoothSaleWebhookNow(sale)
                 "[GLOBAL BOOTH WEBHOOK] Request failed:",
                 tostring(response)
             )
-            BoothSaleDebug(
-                "Global request failed",
-                tostring(response),
-                true
-            )
             return false
         end
 
@@ -13777,15 +13502,6 @@ function SendGlobalBoothSaleWebhookNow(sale)
                     tostring(response.Body or response.body or "")
                 )
 
-                BoothSaleDebug(
-                    "Global HTTP rejected",
-                    "Status "
-                        .. tostring(statusCode)
-                        .. " | "
-                        .. tostring(response.Body or response.body or ""),
-                    true
-                )
-
                 return false
             end
         end
@@ -13793,11 +13509,6 @@ function SendGlobalBoothSaleWebhookNow(sale)
             print(
         "[GLOBAL BOOTH WEBHOOK] Sent booth sale:",
         toolTitle
-    )
-
-    BoothSaleDebug(
-        "Global sent",
-        tostring(toolTitle)
     )
 
     return true
@@ -13811,12 +13522,10 @@ end
 function QueueGlobalBoothSaleWebhook(sale)
 
     if not GlobalBoothSaleWebhook.Enabled then
-        BoothSaleDebug("Global not queued", "Global booth webhook is disabled", true)
         return false
     end
 
     if type(sale) ~= "table" then
-        BoothSaleDebug("Global not queued", "Sale payload is invalid", true)
         return false
     end
 
@@ -13830,13 +13539,6 @@ function QueueGlobalBoothSaleWebhook(sale)
         tostring(sale.ToolName or sale.PetName or "Unknown"),
         "| queue:",
         tostring(#GlobalBoothSaleWebhook.Queue)
-    )
-
-    BoothSaleDebug(
-        "Global queued",
-        tostring(sale.ToolName or sale.PetName or "Unknown")
-            .. " | queue="
-            .. tostring(#GlobalBoothSaleWebhook.Queue)
     )
 
     return true
@@ -13906,12 +13608,6 @@ task.spawn(function()
                 tostring(sent)
             )
 
-            BoothSaleDebug(
-                "Global worker error",
-                tostring(sent),
-                true
-            )
-
             sent =
                 false
         end
@@ -13967,17 +13663,6 @@ task.spawn(function()
                     tostring(maxAttempts)
                 )
 
-                BoothSaleDebug(
-                    "Global retry",
-                    tostring(attempts)
-                        .. "/"
-                        .. tostring(maxAttempts)
-                        .. " | after "
-                        .. tostring(retryDelay)
-                        .. "s",
-                    true
-                )
-
                 task.delay(retryDelay, function()
 
                     if IsCurrentRun()
@@ -14000,17 +13685,6 @@ task.spawn(function()
                         or "Unknown"
                     )
                 )
-
-                BoothSaleDebug(
-                    "Global dropped",
-                    tostring(
-                        sale.ToolName
-                        or sale.PetName
-                        or "Unknown"
-                    ),
-                    true
-                )
-
             end
         end
 
@@ -43529,9 +43203,6 @@ QueueWebhook = function(payload, routeOrURL)
         return false
     end
 
-    local isBoothSale =
-        payload.__BoothSale == true
-
     local targetURL =
         ""
 
@@ -43556,15 +43227,6 @@ QueueWebhook = function(payload, routeOrURL)
     end
 
     if not CanSendWebhookToURL(targetURL) then
-        if isBoothSale then
-            BoothSaleDebug(
-                "Owner not queued",
-                "Route "
-                    .. tostring(routeUsed)
-                    .. " has no valid URL or no HTTP request function",
-                true
-            )
-        end
         return false
     end
 
@@ -43588,16 +43250,6 @@ QueueWebhook = function(payload, routeOrURL)
         tostring(routeUsed)
     )
 
-    if isBoothSale then
-        BoothSaleDebug(
-            "Owner queued",
-            "Route "
-                .. tostring(routeUsed)
-                .. " | queue="
-                .. tostring(#WebhookState.Queue)
-        )
-    end
-
     return true
 end
 
@@ -43611,9 +43263,6 @@ function SendWebhook(payload)
         return false
     end
 
-    local isBoothSale =
-        payload.__BoothSale == true
-
     local targetURL =
         NormalizeWebhookURL(
             payload.__WebhookURL
@@ -43625,9 +43274,6 @@ function SendWebhook(payload)
 
     if targetURL == "" then
         warn("[Webhook] Send failed: missing target URL")
-        if isBoothSale then
-            BoothSaleDebug("Owner blocked", "Target URL is empty", true)
-        end
         return false
     end
 
@@ -43636,13 +43282,6 @@ function SendWebhook(payload)
 
     if not requestFunction then
         warn("[Webhook] Send failed: no request function available")
-        if isBoothSale then
-            BoothSaleDebug(
-                "Owner blocked",
-                "No HTTP request function is available",
-                true
-            )
-        end
         return false
     end
 
@@ -43657,9 +43296,6 @@ function SendWebhook(payload)
         nil
 
     sendPayload.__WebhookAttempts =
-        nil
-
-    sendPayload.__BoothSale =
         nil
 
     local body =
@@ -43685,13 +43321,6 @@ function SendWebhook(payload)
 
     if not ok then
         warn("[WEBHOOK] REQUEST FAILED:", response)
-        if isBoothSale then
-            BoothSaleDebug(
-                "Owner request failed",
-                tostring(response),
-                true
-            )
-        end
         return false
     end
 
@@ -43708,12 +43337,6 @@ function SendWebhook(payload)
         or statusCode == 204
         or statusCode == 202 then
             print("[WEBHOOK] Sent successfully:", tostring(statusCode))
-            if isBoothSale then
-                BoothSaleDebug(
-                    "Owner sent",
-                    "HTTP " .. tostring(statusCode)
-                )
-            end
             return true
         end
 
@@ -43723,27 +43346,10 @@ function SendWebhook(payload)
             tostring(response.Body or response.body or "")
         )
 
-        if isBoothSale then
-            BoothSaleDebug(
-                "Owner HTTP rejected",
-                "Status "
-                    .. tostring(statusCode)
-                    .. " | "
-                    .. tostring(response.Body or response.body or ""),
-                true
-            )
-        end
-
         return false
     end
 
     print("[WEBHOOK] Request completed")
-    if isBoothSale then
-        BoothSaleDebug(
-            "Owner sent",
-            "Request completed without a status table"
-        )
-    end
     return true
 end
 
@@ -43809,18 +43415,8 @@ task.spawn(function()
                     tostring(sent)
                 )
 
-                if type(payload) == "table"
-                and payload.__BoothSale == true then
-                    BoothSaleDebug(
-                        "Owner worker error",
-                        tostring(sent),
-                        true
-                    )
-                end
-
                 sent =
                     false
-
             end
 
             if sent ~= true
@@ -43855,17 +43451,6 @@ task.spawn(function()
                         "/ 3"
                     )
 
-                    if payload.__BoothSale == true then
-                        BoothSaleDebug(
-                            "Owner retry",
-                            tostring(attempts)
-                                .. "/3 | after "
-                                .. tostring(retryDelay)
-                                .. "s",
-                            true
-                        )
-                    end
-
                     task.delay(retryDelay, function()
 
                         if IsCurrentRun() then
@@ -43881,14 +43466,6 @@ task.spawn(function()
                     warn(
                         "[WEBHOOK] Dropped after 3 failed attempts."
                     )
-
-                    if payload.__BoothSale == true then
-                        BoothSaleDebug(
-                            "Owner dropped",
-                            "Webhook failed after 3 retries",
-                            true
-                        )
-                    end
                 end
             end
 
@@ -44109,10 +43686,7 @@ CreateBoothSaleEmbed = function(sale)
                     name = "✨ Token Balance",
                     value = string.format(
                         "%s Tokens",
-                            tostring(
-                                sale.TokenBalance
-                                or GetTokenBalance()
-                            )
+                        tostring(GetTokenBalance())
                     ),
                     inline = false,
                 },
@@ -44602,14 +44176,7 @@ function ResolveRequiredSaleGain(listing)
     )
 end
 
-function FireConfirmedBoothSale(oldListing, tokenBalance, tokenSource)
-
-    oldListing.TokenBalance =
-        tonumber(tokenBalance)
-        or GetTokenBalance()
-
-    oldListing.TokenBalanceSource =
-        tostring(tokenSource or GetTokenBalanceSource())
+function FireConfirmedBoothSale(oldListing)
 
     print(
         "[BOOTH SALE CONFIRMED]",
@@ -44636,57 +44203,20 @@ function FireConfirmedBoothSale(oldListing, tokenBalance, tokenSource)
         end)
     end
 
-    local globalQueued =
-        QueueGlobalBoothSaleWebhook(oldListing)
-
-    if globalQueued ~= true then
-        BoothSaleDebug(
-            "Global not queued",
-            "Sale confirmed but global queue rejected it",
-            true
-        )
-    end
+    QueueGlobalBoothSaleWebhook(oldListing)
 
     if WebhookState.Enabled
     and WebhookState.NotifyBoothSales then
 
-        local ownerPayload =
+        QueueWebhook(
             ApplyWebhookPing(
                 CreateBoothSaleEmbed(oldListing),
                 WebhookState.PingBoothSales
-            )
-
-        ownerPayload.__BoothSale = true
-
-        local ownerQueued =
-            QueueWebhook(
-                ownerPayload,
+            ),
             WebhookState.BoothSalesRoute
-            )
-
-        if ownerQueued == true then
-            BoothSaleDebug(
-                "Owner queued",
-                "Route "
-                    .. tostring(WebhookState.BoothSalesRoute)
-            )
-        else
-            BoothSaleDebug(
-                "Owner not queued",
-                "Owner webhook URL/configuration rejected the sale",
-                true
-            )
-        end
-
-    else
-        BoothSaleDebug(
-            "Owner blocked",
-            "Webhook enabled="
-                .. tostring(WebhookState.Enabled == true)
-                .. " | Booth Sales enabled="
-                .. tostring(WebhookState.NotifyBoothSales == true),
-            true
         )
+
+        print("[WEBHOOK] Booth sale queued")
     end
 end
 
@@ -44702,22 +44232,11 @@ task.spawn(function()
         local current =
             BuildOwnListingSnapshot()
 
-        local currentListingCount =
-            0
-
-        for _ in pairs(current) do
-            currentListingCount =
-                currentListingCount + 1
-        end
-
         local now =
             os.clock()
 
         local tokenBalance =
             GetTokenBalance()
-
-        local tokenSource =
-            GetTokenBalanceSource()
 
         -- First pass only initializes state.
         -- This prevents startup / teleport / booth-load false sales.
@@ -44735,34 +44254,7 @@ task.spawn(function()
             OwnBoothTracker.Initialized =
                 true
 
-            BoothSaleDebug(
-                "Tracker initialized",
-                "Own listings="
-                    .. tostring(currentListingCount)
-                    .. " | tokens="
-                    .. tostring(tokenBalance)
-                    .. " via "
-                    .. tostring(tokenSource)
-                    .. " | booth data="
-                    .. tostring(LatestBoothData ~= nil)
-            )
-
             continue
-        end
-
-        if currentListingCount <= 0 then
-            BoothSaleDebugThrottled(
-                "tracker-no-own-listings",
-                8,
-                "Tracker waiting",
-                "No own booth listings detected | booth data="
-                    .. tostring(LatestBoothData ~= nil)
-                    .. " | tokens="
-                    .. tostring(tokenBalance)
-                    .. " via "
-                    .. tostring(tokenSource),
-                false
-            )
         end
 
         local previous =
@@ -44793,15 +44285,6 @@ task.spawn(function()
                     "[BOOTH LISTING REMOVED/PENDING]",
                     oldListing.PetName
                 )
-
-                BoothSaleDebug(
-                    "Listing pending",
-                    tostring(oldListing.PetName)
-                        .. " | net="
-                        .. tostring(oldListing.NetPrice or oldListing.Price or 0)
-                        .. " | balance before="
-                        .. tostring(OwnBoothTracker.LastTokenBalance)
-                )
             end
         end
 
@@ -44817,12 +44300,6 @@ task.spawn(function()
 
             if current[listingKey] then
                 OwnBoothTracker.PendingMissing[listingKey] = nil
-
-                BoothSaleDebug(
-                    "Listing restored",
-                    tostring(listingKey)
-                        .. " | removal was not a sale"
-                )
             end
         end
 
@@ -44885,26 +44362,6 @@ task.spawn(function()
         local consumedBudget = 0
         local confirmedCount = 0
 
-        if #confirmBatch > 0
-        and tokenGainBudget <= 0 then
-            BoothSaleDebugThrottled(
-                "tracker-no-token-gain",
-                2,
-                "Sale waiting for token gain",
-                "Pending="
-                    .. tostring(#confirmBatch)
-                    .. " | balance="
-                    .. tostring(tokenBalance)
-                    .. " via "
-                    .. tostring(tokenSource)
-                    .. " | checkpoint="
-                    .. tostring(OwnBoothTracker.SaleTokenCheckpoint)
-                    .. " | delta="
-                    .. tostring(tokenGainBudget),
-                true
-            )
-        end
-
         if tokenGainBudget > 0
         and #confirmBatch > 0 then
 
@@ -44933,24 +44390,7 @@ task.spawn(function()
 
                 if availableBudget >= requiredGain then
 
-                    BoothSaleDebug(
-                        "Sale confirmed",
-                        tostring(oldListing.PetName)
-                            .. " | balance="
-                            .. tostring(tokenBalance)
-                            .. " via "
-                            .. tostring(tokenSource)
-                            .. " | gain="
-                            .. tostring(availableBudget)
-                            .. " | required="
-                            .. tostring(requiredGain)
-                    )
-
-                    FireConfirmedBoothSale(
-                        oldListing,
-                        tokenBalance,
-                        tokenSource
-                    )
+                    FireConfirmedBoothSale(oldListing)
 
                     consumedBudget =
                     consumedBudget + requiredGain
@@ -44958,24 +44398,6 @@ task.spawn(function()
                     confirmedCount + 1
 
                     OwnBoothTracker.PendingMissing[listingKey] = nil
-
-                else
-                    BoothSaleDebugThrottled(
-                        "tracker-insufficient-"
-                            .. tostring(listingKey),
-                        2,
-                        "Sale waiting for enough tokens",
-                        tostring(oldListing.PetName)
-                            .. " | balance="
-                            .. tostring(tokenBalance)
-                            .. " via "
-                            .. tostring(tokenSource)
-                            .. " | available="
-                            .. tostring(availableBudget)
-                            .. " | required="
-                            .. tostring(requiredGain),
-                        true
-                    )
                 end
             end
         end
@@ -45013,24 +44435,6 @@ task.spawn(function()
                     oldListing
                     and oldListing.PetName
                     or tostring(listingKey)
-                )
-
-                BoothSaleDebug(
-                    "Sale not confirmed",
-                    tostring(
-                        oldListing
-                        and oldListing.PetName
-                        or listingKey
-                    )
-                        .. " | no matching token gain after "
-                        .. tostring(
-                            math.floor(elapsed * 10) / 10
-                        )
-                        .. "s | balance="
-                        .. tostring(tokenBalance)
-                        .. " via "
-                        .. tostring(tokenSource),
-                    true
                 )
 
                 OwnBoothTracker.PendingMissing[listingKey] = nil
@@ -48385,12 +47789,6 @@ function BuildWebhookTab()
         Tooltip = "Queues one sample booth sale for the owner webhook and the global booth-sale webhook.",
         Func = function()
 
-            local testTokenBalance =
-                GetTokenBalance()
-
-            local testTokenSource =
-                GetTokenBalanceSource()
-
             local sampleSale = {
                 PetName = "Webhook Test Pet",
                 ToolName = "Webhook Test Pet [Age 1] [1.00 KG]",
@@ -48401,7 +47799,6 @@ function BuildWebhookTab()
                 GrossPrice = 1,
                 NetPrice = 1,
                 Price = 1,
-                TokenBalance = testTokenBalance,
             }
 
             local ownerQueued =
@@ -48428,11 +47825,7 @@ function BuildWebhookTab()
 
             HolyNotify(
                 "Booth Sale Webhook Test",
-                "Balance: "
-                    .. tostring(testTokenBalance)
-                    .. " ("
-                    .. tostring(testTokenSource)
-                    .. ") | Owner: "
+                "Owner: "
                     .. (
                         ownerQueued
                         and "queued"
@@ -50464,7 +49857,6 @@ end
                     "[LISTINGS] AutoList restore failed:",
                     tostring(restoreErr)
                 )
-
             end
 
         else
@@ -50845,7 +50237,6 @@ function EquipShowcasePet(force)
                     "[BoothPet] No matching listed showcase pet:",
                     targetPet
                 )
-
             end
 
             return
