@@ -9745,8 +9745,9 @@ function TransferAutoAcceptIncomingRequest()
 
     local ok, err =
         pcall(function()
-            -- The game uses false to accept an incoming ticket.
-            responder:FireServer(requestId, false)
+            -- Ticket-request response: true accepts the request. The normal
+            -- TradeEvents.Accept call below is still used for the open trade.
+            responder:FireServer(requestId, true)
         end)
 
     if not ok then
