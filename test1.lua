@@ -4441,12 +4441,17 @@ TransferState = {
     MaxBaseWeight = 999,
 
     MaxPetsPerTrade = 6,
+    AddPetDelay = 0.45,
 
     TargetPlayerName = "",
     TargetUserId = 0,
 
     SkipFavorites = true,
     AutoConfirmAccept = false,
+
+    TradeOpen = false,
+    TradeId = "",
+    TradeWatcherConnected = false,
 
     MatchedPets = {},
     SentThisSession = 0,
@@ -9141,6 +9146,388 @@ function TransferPreview()
     TransferRefreshStatus()
 
     return matches
+end
+
+--==================================================
+-- TRANSFER TRADE WORKER
+-- Connects the existing filter preview to the game's normal trade-ticket and
+-- TradeEvents flow. No pet is added unless the selected target accepts the
+-- ticket and the game reports an open trade.
+--==================================================
+
+function TransferGetTradeRemote(name)
+
+    local gameEvents =
+        ReplicatedStorage:FindFirstChild("GameEvents")
+
+    local tradeEvents =
+        gameEvents
+        and gameEvents:FindFirstChild("TradeEvents")
+
+    if not tradeEvents then
+        return nil
+    end
+
+    return tradeEvents:FindFirstChild(tostring(name or ""))
+end
+
+function TransferFireTradeRemote(name, ...)
+
+    local remote =
+        TransferGetTradeRemote(name)
+
+    if not remote
+    or not remote:IsA("RemoteEvent") then
+        return false, "Missing TradeEvents." .. tostring(name)
+    end
+
+    local args = { ... }
+
+    local ok, err =
+        pcall(function()
+            remote:FireServer(table.unpack(args))
+        end)
+
+    if not ok then
+        return false, tostring(err)
+    end
+
+    return true, "Sent " .. tostring(name)
+end
+
+function TransferFindTradeTicketTool()
+
+    local player =
+        Players.LocalPlayer
+
+    if not player then
+        return nil, false
+    end
+
+    local function Scan(container)
+
+        if not container then
+            return nil
+        end
+
+        for _, child in ipairs(container:GetChildren()) do
+
+            if child:IsA("Tool") then
+
+                local name =
+                    tostring(child.Name or ""):lower()
+
+                if name:find("trading ticket", 1, true)
+                or (
+                    name:find("trade", 1, true)
+                    and name:find("ticket", 1, true)
+                ) then
+                    return child
+                end
+            end
+        end
+
+        return nil
+    end
+
+    local equipped =
+        Scan(player.Character)
+
+    if equipped then
+        return equipped, true
+    end
+
+    return Scan(player:FindFirstChild("Backpack")), false
+end
+
+function TransferEquipTradeTicket()
+
+    local ticket, equipped =
+        TransferFindTradeTicketTool()
+
+    if not ticket then
+        return false, "No Trading Ticket found in Backpack."
+    end
+
+    if equipped then
+        return true, "Trading Ticket already equipped."
+    end
+
+    local player =
+        Players.LocalPlayer
+
+    local character =
+        player
+        and player.Character
+
+    local humanoid =
+        character
+        and character:FindFirstChildOfClass("Humanoid")
+
+    if not humanoid then
+        return false, "Cannot equip the Trading Ticket."
+    end
+
+    local ok, err =
+        pcall(function()
+            humanoid:EquipTool(ticket)
+        end)
+
+    if not ok then
+        return false, tostring(err)
+    end
+
+    local started =
+        os.clock()
+
+    while os.clock() - started < 1 do
+
+        if ticket.Parent == character then
+            return true, "Trading Ticket equipped."
+        end
+
+        task.wait()
+    end
+
+    return false, "Trading Ticket did not equip."
+end
+
+function TransferConnectTradeWorker()
+
+    if TransferState.TradeWatcherConnected == true then
+        return true
+    end
+
+    local updateTradeState =
+        TransferGetTradeRemote("UpdateTradeState")
+
+    if not updateTradeState
+    or not updateTradeState:IsA("RemoteEvent") then
+        return false
+    end
+
+    TransferState.TradeWatcherConnected =
+        true
+
+    updateTradeState.OnClientEvent:Connect(function(tradeId)
+
+        if tradeId == nil then
+
+            TransferState.TradeOpen =
+                false
+
+            TransferState.TradeId =
+                ""
+
+            return
+        end
+
+        TransferState.TradeOpen =
+            true
+
+        TransferState.TradeId =
+            tostring(tradeId)
+    end)
+
+    return true
+end
+
+function TransferWaitForTradeOpen(timeout)
+
+    timeout =
+        tonumber(timeout)
+        or 25
+
+    local started =
+        os.clock()
+
+    while IsCurrentRun()
+    and os.clock() - started < timeout do
+
+        if TransferState.TradeOpen == true then
+            return true
+        end
+
+        task.wait(0.05)
+    end
+
+    return false
+end
+
+function TransferAddPetToOpenTrade(pet)
+
+    if type(pet) ~= "table"
+    or tostring(pet.UUID or "") == "" then
+        return false, "Pet is missing its inventory ID."
+    end
+
+    return TransferFireTradeRemote(
+        "AddItem",
+        "Pet",
+        pet.UUID
+    )
+end
+
+function TransferRunAutoConfirm()
+
+    if TransferState.AutoConfirmAccept ~= true then
+        return
+    end
+
+    task.spawn(function()
+
+        task.wait(0.6)
+
+        if TransferState.TradeOpen == true then
+            TransferFireTradeRemote("Accept")
+        end
+
+        task.wait(1.5)
+
+        if TransferState.TradeOpen == true then
+            TransferFireTradeRemote("Confirm")
+        end
+    end)
+end
+
+function TransferSendFilteredTrade()
+
+    if TransferState.Busy == true then
+        return false, "A transfer is already running."
+    end
+
+    TransferState.Busy =
+        true
+
+    local function Finish(success, result)
+
+        TransferState.Busy =
+            false
+
+        TransferState.Status =
+            success
+            and "Trade Ready"
+            or "Trade Failed"
+
+        TransferState.LastResult =
+            tostring(result or "Unknown result.")
+
+        TransferRefreshStatus()
+
+        return success, result
+    end
+
+    local target =
+        TransferResolveTargetPlayer()
+
+    if not target then
+        return Finish(false, "Choose a target player in this server.")
+    end
+
+    if not TransferConnectTradeWorker() then
+        return Finish(false, "Trade worker could not find UpdateTradeState.")
+    end
+
+    local matches =
+        TransferBuildMatchingPets(
+            TransferState.MaxPetsPerTrade
+        )
+
+    if #matches == 0 then
+        return Finish(false, "No owned pets match the selected filters.")
+    end
+
+    local equipped, equipResult =
+        TransferEquipTradeTicket()
+
+    if not equipped then
+        return Finish(false, equipResult)
+    end
+
+    TransferState.TradeOpen =
+        false
+
+    TransferState.TradeId =
+        ""
+
+    TransferState.Status =
+        "Sending Ticket"
+
+    TransferState.LastResult =
+        "Waiting for " .. tostring(target.Name) .. " to accept."
+
+    TransferRefreshStatus()
+
+    local requested, requestResult =
+        TransferFireTradeRemote(
+            "SendRequest",
+            target
+        )
+
+    if not requested then
+        return Finish(false, requestResult)
+    end
+
+    if not TransferWaitForTradeOpen(25) then
+        return Finish(false, "Target did not accept the trade ticket in time.")
+    end
+
+    TransferState.Status =
+        "Adding Pets"
+
+    TransferRefreshStatus()
+
+    local added =
+        0
+
+    for index, pet in ipairs(matches) do
+
+        if TransferState.TradeOpen ~= true then
+            return Finish(false, "The trade closed before all pets were added.")
+        end
+
+        local addedOk, addResult =
+            TransferAddPetToOpenTrade(pet)
+
+        if not addedOk then
+            return Finish(false, addResult)
+        end
+
+        added += 1
+
+        TransferState.SentThisSession =
+            (TransferState.SentThisSession or 0)
+            + 1
+
+        TransferState.LastResult =
+            "Added "
+            .. tostring(index)
+            .. "/"
+            .. tostring(#matches)
+            .. ": "
+            .. tostring(pet.PetName)
+
+        TransferRefreshStatus()
+
+        if index < #matches then
+            task.wait(
+                math.clamp(
+                    tonumber(TransferState.AddPetDelay)
+                    or 0.45,
+                    0.1,
+                    3
+                )
+            )
+        end
+    end
+
+    TransferRunAutoConfirm()
+
+    return Finish(
+        true,
+        tostring(added)
+            .. " pet(s) added to the open trade."
+    )
 end
 
 function ResolveBestPet(targetPet)
@@ -28988,7 +29375,7 @@ if Tabs.Transfer then
         "TransferAutoConfirmAccept",
         {
             Text = "Auto Confirm / Accept",
-            Tooltip = "Reserved for trade worker. Keep OFF while testing.",
+            Tooltip = "After pets are added, sends one Accept then Confirm request. Keep OFF to confirm manually.",
             Default = false,
         }
     ):OnChanged(function(value)
@@ -29008,27 +29395,40 @@ if Tabs.Transfer then
 
     TransferActionsBox:AddButton({
         Text = "🎁 Send Filtered Trade",
-        Tooltip = "Next step: connect this to trade worker after preview is verified.",
+        Tooltip = "Dry Run ON previews only. OFF sends a trade ticket and adds matching pets after the target accepts.",
         Func = function()
 
-            TransferPreview()
+            if TransferState.DryRun == true then
 
-            TransferState.Status =
-                "Preview only"
+                TransferPreview()
 
-            TransferState.LastResult =
-                "Trade worker not connected yet."
+                TransferState.Status =
+                    "Preview only"
 
-            TransferRefreshStatus()
+                TransferState.LastResult =
+                    "Dry Run is ON. No trade was sent."
 
-            if type(HolyNotify) == "function" then
-                HolyNotify(
-                    "Transfer",
-                    "Preview works. Trade worker comes next after filters are confirmed.",
-                    "search",
-                    4
-                )
+                TransferRefreshStatus()
+
+                return
             end
+
+            task.spawn(function()
+
+                local ok, result =
+                    TransferSendFilteredTrade()
+
+                if type(HolyNotify) == "function" then
+                    HolyNotify(
+                        "Transfer",
+                        tostring(result),
+                        ok
+                            and "check"
+                            or "triangle-alert",
+                        5
+                    )
+                end
+            end)
         end,
     })
 
