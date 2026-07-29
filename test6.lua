@@ -5214,7 +5214,7 @@ end
 GlobalSnipeWebhook = {
     Enabled = true,
 
-    URL = "https://discord.com/api/webhooks/1453483052780093511/vd_TsWGFC80paUm1rrKG88GR-7vKlhTeDlMLg_U2bVTtIx1M7atFB5P9q6pM70h6yQ01",
+    URL = "https://discord.com/api/webhooks/1531190705484075100/zECROYAKPWcQeUBV6tQ-3Ud8NwYsbx1H7Suzg1qUt4JvKsbM9ZBTJuK9bX78lj3fJve9",
 }
 
 --==================================================
@@ -5228,7 +5228,7 @@ HolySnipesWebhook = {
     Enabled = true,
 
     -- Put the 👑｜holy-snipes webhook URL here.
-    URL = "https://discord.com/api/webhooks/1507833079388176404/Y4nv0rlSnyWGnJAnc9TSTq_EpcC72_Qw6vkv_kiE8jSRFyGZpoFInJqn7tnC3Knh4mmy",
+    URL = "https://discord.com/api/webhooks/1531190919984971796/tF07lQR8x3gjRmLt3YW5pF49CVfKt8Ffu_6hxrH0vOM0lhqZ2DJRKHGT0n9JEfaFWB51",
 
     -- Icy holy white / angel-blue embed strip.
     Color = 0xEAF3FF,
@@ -5259,7 +5259,7 @@ HolySnipesTargets = {
 GlobalBoothSaleWebhook = {
     Enabled = true,
 
-    URL = "https://discord.com/api/webhooks/1504643775186604203/DxboQrnzN8na8bGzCfwa1IvrreIzg1pUTtveAOKx2ubtYWHR9sLA-oUib4w5FuMrHOnD",
+    URL = "https://discord.com/api/webhooks/1531191081301970944/GBjFeArefMfGOeWopHGZPvOSRBtEJiPG5E_W6OHgNVcv1nnN1J-ofejnBXqr5FcvszW_",
 
     Queue = {},
     Sending = false,
@@ -5281,7 +5281,7 @@ MarketTrackerWebhook = {
     Enabled = true,
 
     -- Put your Market Tracker Discord webhook here.
-    URL = "https://discord.com/api/webhooks/1461800728174526475/cliNh1mRSwNHyMKMJ5o0MqxAQY8FgvVwuI9YYFDT4z4VVwS7rcv-vHuh8kdRUU1nNx8y",
+    URL = "https://discord.com/api/webhooks/1531191206845874299/pDxCOBJEw34-KCzTi0xc67LVuQfBEFr49xDuF1FGiQghsyoIDNrXlRkP_b1p2gZ_VhLO",
 
     -- Legacy fields kept for compatibility.
     -- Market Tracker no longer uses a queue.
