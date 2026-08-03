@@ -5328,10 +5328,10 @@ MarketTrackerTargets = {
         -- <= GoodPrice   = ✅ Good / green
         -- <= MaxPrice    = ⚖️ Fair / yellow
         -- > MaxPrice     = ❌ Overpriced / red
-        MaxPrice = 50000,
-        GoodPrice = 30000,
-        SnipePrice = 15000,
-        PingBelow = 15000,
+        MaxPrice = 15000,
+        GoodPrice = 14000,
+        SnipePrice = 12000,
+        PingBelow = 10000,
 
         MinWeight = 0,
     },
@@ -5340,10 +5340,10 @@ MarketTrackerTargets = {
         Type = "Rare",
         Emoji = "🐘",
 
-        MaxPrice = 2000000,
-        GoodPrice = 500000,
-        SnipePrice = 250000,
-        PingBelow = 00000,
+        MaxPrice = 500000,
+        GoodPrice = 250000,
+        SnipePrice = 200000,
+        PingBelow = 100000,
 
         MinWeight = 0,
     },
@@ -5352,10 +5352,10 @@ MarketTrackerTargets = {
         Type = "Rare",
         Emoji = "🐦",
 
-        MaxPrice = 50000,
-        GoodPrice = 40000,
-        SnipePrice = 30000,
-        PingBelow = 30000,
+        MaxPrice = 16000,
+        GoodPrice = 15000,
+        SnipePrice = 13000,
+        PingBelow = 10000,
 
         MinWeight = 0,
     },
@@ -5364,10 +5364,10 @@ MarketTrackerTargets = {
         Type = "Rare",
         Emoji = "🦖",
 
-        MaxPrice = 60000,
-        GoodPrice = 30000,
-        SnipePrice = 25000,
-        PingBelow = 25000,
+        MaxPrice = 16000,
+        GoodPrice = 14000,
+        SnipePrice = 12000,
+        PingBelow = 10000,
 
         MinWeight = 0,
     },
@@ -5376,10 +5376,10 @@ MarketTrackerTargets = {
         Type = "Rare",
         Emoji = "🐋",
 
-        MaxPrice = 50000,
-        GoodPrice = 20000,
-        SnipePrice = 15000,
-        PingBelow = 15000,
+        MaxPrice = 14000,
+        GoodPrice = 12000,
+        SnipePrice = 10000,
+        PingBelow = 8000,
 
         MinWeight = 0,
     },
@@ -5400,10 +5400,10 @@ MarketTrackerTargets = {
         Type = "Rare",
         Emoji = "🦂",
 
-        MaxPrice = 70000,
-        GoodPrice = 50000,
-        SnipePrice = 15000,
-        PingBelow = 15000,
+        MaxPrice = 17000,
+        GoodPrice = 14000,
+        SnipePrice = 11000,
+        PingBelow = 10000,
 
         MinWeight = 0,
     },
@@ -5412,10 +5412,10 @@ MarketTrackerTargets = {
         Type = "Rare",
         Emoji = "🎃",
 
-        MaxPrice = 30000,
-        GoodPrice = 20000,
-        SnipePrice = 15000,
-        PingBelow = 10000,
+        MaxPrice = 10000,
+        GoodPrice = 9000,
+        SnipePrice = 8000,
+        PingBelow = 8000,
 
         MinWeight = 0,
     },
@@ -5441,24 +5441,24 @@ MarketTrackerTargets = {
         Type = "Weight",
         Emoji = "🦭",
 
-        MaxPrice = 25000,
-        GoodPrice = 20000,
-        SnipePrice = 15000,
-        PingBelow = 5000,
+        MaxPrice = 2500,
+        GoodPrice = 1500,
+        SnipePrice = 1200,
+        PingBelow = 1000,
 
-        MinWeight = 100,
+        MinWeight = 500,
     },
 
     ["Mimic Octopus"] = {
         Type = "Weight",
         Emoji = "🐙",
 
-        MaxPrice = 10000,
-        GoodPrice = 6000,
-        SnipePrice = 3000,
-        PingBelow = 3000,
+        MaxPrice = 2500,
+        GoodPrice = 1500,
+        SnipePrice = 1200,
+        PingBelow = 1000,
 
-        MinWeight = 100,
+        MinWeight = 500,
     },
 
 }
@@ -15044,7 +15044,7 @@ function BuildBoothSaleWebhookPayload(sale, hideSeller)
                 weight
             ),
             description = string.format(
-                "By User: **%s**\n```ansi\n💰 Sold For: %s\n✨ Token Balance: %s\n```",
+                "By User: ||%s||\n```ansi\n💰 Sold For: %s\n✨ Token Balance: %s\n```",
                 seller,
                 FormatBoothSaleTokenAmount(soldFor),
                 FormatBoothSaleTokenAmount(tokenBalance)
@@ -15906,13 +15906,13 @@ local title =
         .. tostring(game.JobId)
 
     local description =
-        "Listed By: **"
+        "Listed By: ||"
         .. tostring(sellerName)
-        .. "**\n\n```ansi\n💸 Price: "
+        .. "||\n```ansi\n💸 Price: "
         .. tostring(priceText)
         .. "\n🔎 Deal: "
         .. tostring(deal.Text)
-        .. "\n```\n\n"
+        .. "\n```"
         .. "**Server:**\n"
         .. "[Open Game]("
         .. webJoinLink
@@ -15952,12 +15952,12 @@ local payload = {
     if deal.ShouldPing == true then
 
     payload.content =
-        "<@&1506753055050170559>"
+        "@everyone"
 
     payload.allowed_mentions = {
         parse = {},
         roles = {
-            "1506753055050170559",
+            "everyone",
         },
     }
 else
@@ -16295,7 +16295,7 @@ function BuildSnipeWebhookPayload(listing, toolName, hideSniper)
 
     local sniper =
         hideSniper
-        and "Hidden"
+        and "Zanji Hub"
         or tostring(
             Players.LocalPlayer
             and Players.LocalPlayer.Name
