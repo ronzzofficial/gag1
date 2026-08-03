@@ -4570,6 +4570,26 @@ TransferState = {
     AutoUnfavorite = false,
     AutoConfirmAccept = false,
 
+    -- Garden-only: "Gift System" or "Trade System". Trade World always uses trade.
+    SystemMode = "Gift System",
+
+    GiftWatcherConnected = false,
+    GiftAcceptPromptWatcherConnected = false,
+    GiftNotificationWatcherConnected = false,
+    OutgoingGiftInProgress = false,
+    GiftAcceptInProgress = false,
+    IncomingGiftId = "",
+    IncomingGiftPlayerName = "",
+    IncomingGiftUserId = 0,
+    IncomingGiftAt = 0,
+    IncomingGiftsHandled = {},
+    LastGiftError = "",
+
+    SystemModeDropdownRef = nil,
+    SendButtonRef = nil,
+    FavoritesLabel = nil,
+    LastActionsLayoutKey = "",
+
     TradeOpen = false,
     TradeId = "",
     TradeWatcherConnected = false,
@@ -9309,7 +9329,33 @@ function TransferBuildMatchingPets(limit)
     return matches
 end
 
+function TransferCountMatchedFavoriteStats()
+
+    local favorited =
+        0
+
+    local notFavorited =
+        0
+
+    for _, pet in ipairs(TransferState.MatchedPets or {}) do
+
+        if TransferToolIsFavorite(pet.Tool) == true then
+            favorited +=
+                1
+        else
+            notFavorited +=
+                1
+        end
+    end
+
+    return favorited, notFavorited
+end
+
 function TransferRefreshStatus()
+
+    if type(TransferApplyActionsLayout) == "function" then
+        TransferApplyActionsLayout()
+    end
 
     local eligibleCount =
         #(TransferState.MatchedPets or {})
@@ -9334,6 +9380,9 @@ function TransferRefreshStatus()
                 or " pets"
             )
         )
+
+    local favoritedCount, notFavoritedCount =
+        TransferCountMatchedFavoriteStats()
 
     if TransferState.StatusLabel
     and type(TransferState.StatusLabel.SetText) == "function" then
@@ -9368,14 +9417,35 @@ function TransferRefreshStatus()
         )
     end
 
+    if TransferState.FavoritesLabel
+    and type(TransferState.FavoritesLabel.SetText) == "function" then
+
+        TransferState.FavoritesLabel:SetText(
+            "Favorites: "
+                .. tostring(favoritedCount)
+                .. " favorited | "
+                .. tostring(notFavoritedCount)
+                .. " not favorited"
+        )
+    end
+
     if TransferState.LastResultLabel
     and type(TransferState.LastResultLabel.SetText) == "function" then
+
+        local resultText =
+            tostring(TransferState.LastResult or "Ready")
+
+        if TransferIsGiftMode()
+        and TransferCleanText(TransferState.LastGiftError) ~= "" then
+            resultText =
+                TransferCleanText(TransferState.LastGiftError)
+        end
 
         TransferState.LastResultLabel:SetText(
             "Progress: "
                 .. TransferGetProgressText()
                 .. " | "
-                .. tostring(TransferState.LastResult or "Ready")
+                .. resultText
         )
     end
 end
@@ -9456,6 +9526,960 @@ function TransferPreview()
     TransferRefreshStatus()
 
     return matches
+end
+
+function TransferSetActionsBoxTitle(title)
+
+    if not TransferActionsBox then
+        return
+    end
+
+    local holder =
+        TransferActionsBox.Holder
+
+    if not holder then
+        return
+    end
+
+    for _, child in ipairs(holder:GetChildren()) do
+
+        if child:IsA("TextLabel")
+        and child.Size.Y.Offset == 34 then
+            child.Text =
+                tostring(title or "")
+
+            break
+        end
+    end
+end
+
+function TransferGetActiveSystemMode()
+
+    if IsTradeWorld() then
+        return "Trade System"
+    end
+
+    if IsGardenWorld() then
+
+        local mode =
+            TransferCleanText(
+                TransferState.SystemMode
+            )
+
+        if mode == "Trade System"
+        or mode == "Gift System" then
+            return mode
+        end
+
+        return "Gift System"
+    end
+
+    return "Trade System"
+end
+
+function TransferIsGiftMode()
+
+    return IsGardenWorld()
+        and TransferGetActiveSystemMode() == "Gift System"
+end
+
+function TransferApplyActionsLayout()
+
+    local layoutKey =
+        (IsTradeWorld() and "TW" or IsGardenWorld() and "GG" or "OTHER")
+        .. ":"
+        .. TransferGetActiveSystemMode()
+
+    if layoutKey == TransferState.LastActionsLayoutKey then
+        return
+    end
+
+    TransferState.LastActionsLayoutKey =
+        layoutKey
+
+    if IsTradeWorld() then
+        TransferSetActionsBoxTitle(
+            "🎁 Trade Actions"
+        )
+    elseif IsGardenWorld() then
+        TransferSetActionsBoxTitle(
+            "🎁 Gifting/Trade Actions"
+        )
+    else
+        TransferSetActionsBoxTitle(
+            "🎁 Trade Actions"
+        )
+    end
+
+    if TransferState.SystemModeDropdownRef
+    and type(TransferState.SystemModeDropdownRef.SetVisible) == "function" then
+        TransferState.SystemModeDropdownRef:SetVisible(
+            IsGardenWorld()
+        )
+    end
+
+    if TransferState.SendButtonRef
+    and type(TransferState.SendButtonRef.SetText) == "function" then
+
+        if TransferIsGiftMode() then
+            TransferState.SendButtonRef:SetText(
+                "🎁 Send Filtered Gifts"
+            )
+        else
+            TransferState.SendButtonRef:SetText(
+                "🎁 Send Filtered Trade"
+            )
+        end
+    end
+
+    if TransferGetRole() == "Receiver" then
+
+        if TransferIsGiftMode() then
+            TransferArmGiftReceiverWorker()
+        else
+            TransferArmReceiverWorker()
+        end
+    end
+end
+
+--==================================================
+-- TRANSFER GIFT WORKER
+-- Garden gifting via PetGiftingService + AcceptPetGift.
+-- Sends one equipped pet at a time to the selected target.
+--==================================================
+
+function TransferGetGiftRemote()
+
+    local gameEvents =
+        ReplicatedStorage:FindFirstChild("GameEvents")
+
+    return gameEvents
+        and gameEvents:FindFirstChild("PetGiftingService")
+end
+
+function TransferGetAcceptGiftRemote()
+
+    local gameEvents =
+        ReplicatedStorage:FindFirstChild("GameEvents")
+
+    return gameEvents
+        and gameEvents:FindFirstChild("AcceptPetGift")
+end
+
+function TransferFireGiftRemote(...)
+
+    local remote =
+        TransferGetGiftRemote()
+
+    if not remote
+    or not remote:IsA("RemoteEvent") then
+        return false, "Missing PetGiftingService remote."
+    end
+
+    local args = { ... }
+
+    local ok, err =
+        pcall(function()
+            remote:FireServer(table.unpack(args))
+        end)
+
+    if not ok then
+        return false, tostring(err)
+    end
+
+    return true, "Sent gift action."
+end
+
+function TransferFireAcceptGiftRemote(accept, giftId)
+
+    local remote =
+        TransferGetAcceptGiftRemote()
+
+    if not remote
+    or not remote:IsA("RemoteEvent") then
+        return false, "Missing AcceptPetGift remote."
+    end
+
+    local ok, err =
+        pcall(function()
+            remote:FireServer(
+                accept == true,
+                TransferCleanText(giftId)
+            )
+        end)
+
+    if not ok then
+        return false, tostring(err)
+    end
+
+    return true, "Sent AcceptPetGift."
+end
+
+function TransferEquipPetTool(pet)
+
+    if type(pet) ~= "table"
+    or not pet.Tool
+    or not pet.Tool:IsA("Tool") then
+        return false, "Pet tool missing."
+    end
+
+    local tool =
+        pet.Tool
+
+    local player =
+        Players.LocalPlayer
+
+    local character =
+        player
+        and player.Character
+
+    if tool.Parent == character then
+        return true, "Pet already equipped."
+    end
+
+    local humanoid =
+        character
+        and character:FindFirstChildOfClass("Humanoid")
+
+    if not humanoid then
+        return false, "Cannot equip the pet."
+    end
+
+    local ok, err =
+        pcall(function()
+            humanoid:EquipTool(tool)
+        end)
+
+    if not ok then
+        return false, tostring(err)
+    end
+
+    local started =
+        os.clock()
+
+    while os.clock() - started < 1 do
+
+        if tool.Parent == character then
+            return true, "Pet equipped."
+        end
+
+        task.wait()
+    end
+
+    return false, "Pet did not equip."
+end
+
+function TransferWaitForSinglePetRemoval(pet, timeout)
+
+    timeout =
+        tonumber(timeout)
+        or 15
+
+    local uuid =
+        tostring(
+            type(pet) == "table"
+            and pet.UUID
+            or ""
+        )
+
+    if uuid == "" then
+        return false
+    end
+
+    local started =
+        os.clock()
+
+    while IsCurrentRun()
+    and os.clock() - started < timeout do
+
+        local stillOwned =
+            false
+
+        for _, ownedPet in ipairs(TransferBuildInventoryPets()) do
+
+            if tostring(ownedPet.UUID or "") == uuid then
+                stillOwned =
+                    true
+
+                break
+            end
+        end
+
+        if stillOwned ~= true then
+            return true
+        end
+
+        task.wait(0.25)
+    end
+
+    return false
+end
+
+function TransferIncomingGiftMatchesTarget()
+
+    local targetUserId =
+        tonumber(TransferState.TargetUserId)
+        or 0
+
+    local senderUserId =
+        tonumber(TransferState.IncomingGiftUserId)
+        or 0
+
+    if targetUserId > 0
+    and senderUserId > 0 then
+        return targetUserId == senderUserId
+    end
+
+    local targetName =
+        TransferCleanText(
+            TransferState.TargetPlayerName
+        ):lower()
+
+    local senderName =
+        TransferCleanText(
+            TransferState.IncomingGiftPlayerName
+        ):lower()
+
+    return targetName ~= ""
+        and senderName ~= ""
+        and targetName == senderName
+end
+
+function TransferRecordIncomingGift(giftId, senderPlayer)
+
+    giftId =
+        TransferCleanText(giftId)
+
+    if giftId == ""
+    or TransferState.IncomingGiftsHandled[giftId] == true then
+        return false
+    end
+
+    if TransferState.OutgoingGiftInProgress == true
+    or TransferState.GiftAcceptInProgress == true then
+        TransferState.LastResult =
+            "Incoming gift queued: finish the current gift first."
+
+        TransferRefreshStatus()
+
+        return false
+    end
+
+    TransferState.IncomingGiftId =
+        giftId
+
+    TransferState.IncomingGiftPlayerName =
+        senderPlayer
+        and tostring(senderPlayer.Name or "")
+        or ""
+
+    TransferState.IncomingGiftUserId =
+        senderPlayer
+        and tonumber(senderPlayer.UserId)
+        or 0
+
+    TransferState.IncomingGiftAt =
+        os.clock()
+
+    TransferState.Status =
+        "Incoming Gift"
+
+    TransferState.LastResult =
+        "Gift from "
+        .. tostring(
+            TransferState.IncomingGiftPlayerName ~= ""
+            and TransferState.IncomingGiftPlayerName
+            or "unknown"
+        )
+
+    TransferRefreshStatus()
+
+    if TransferGetRole() == "Receiver"
+    and TransferState.AutoConfirmAccept == true
+    and TransferIsGiftMode() then
+        task.defer(function()
+            TransferAutoAcceptIncomingGift()
+        end)
+    end
+
+    return true
+end
+
+function TransferAutoAcceptIncomingGift()
+
+    local giftId =
+        TransferCleanText(
+            TransferState.IncomingGiftId
+        )
+
+    if giftId == ""
+    or TransferState.IncomingGiftsHandled[giftId] == true
+    or TransferState.GiftAcceptInProgress == true then
+        return false
+    end
+
+    if TransferState.AutoConfirmAccept ~= true
+    or TransferGetRole() ~= "Receiver"
+    or TransferIsGiftMode() ~= true then
+        return false
+    end
+
+    if TransferState.OutgoingGiftInProgress == true then
+        TransferState.Status =
+            "Gift Accept Waiting"
+
+        TransferState.LastResult =
+            "Cannot accept yet: an outgoing gift is still in progress."
+
+        TransferRefreshStatus()
+
+        return false
+    end
+
+    if os.clock() - (tonumber(TransferState.IncomingGiftAt) or 0) > 45 then
+        TransferState.LastResult =
+            "Incoming gift expired before it could be accepted."
+
+        TransferRefreshStatus()
+
+        return false
+    end
+
+    if TransferIncomingGiftMatchesTarget() ~= true then
+        TransferState.Status =
+            "Gift Ignored"
+
+        TransferState.LastResult =
+            "Incoming gift is not from the selected target player."
+
+        TransferRefreshStatus()
+
+        return false
+    end
+
+    TransferState.GiftAcceptInProgress =
+        true
+
+    TransferState.Status =
+        "Accepting Gift"
+
+    TransferRefreshStatus()
+
+    local accepted, acceptResult =
+        TransferFireAcceptGiftRemote(
+            true,
+            giftId
+        )
+
+    if not accepted then
+        TransferState.GiftAcceptInProgress =
+            false
+
+        TransferState.LastResult =
+            tostring(acceptResult)
+
+        TransferRefreshStatus()
+
+        return false
+    end
+
+    TransferState.IncomingGiftsHandled[giftId] =
+        true
+
+    TransferState.IncomingGiftId =
+        ""
+
+    TransferState.IncomingGiftPlayerName =
+        ""
+
+    TransferState.IncomingGiftUserId =
+        0
+
+    TransferState.IncomingGiftAt =
+        0
+
+    TransferState.GiftAcceptInProgress =
+        false
+
+    TransferState.Status =
+        "Gift Accepted"
+
+    TransferState.LastResult =
+        "Accepted incoming gift automatically."
+
+    TransferRefreshStatus()
+
+    return true
+end
+
+function TransferConnectGiftWorker()
+
+    local giftRemote =
+        TransferGetGiftRemote()
+
+    local acceptRemote =
+        TransferGetAcceptGiftRemote()
+
+    if giftRemote
+    and giftRemote:IsA("RemoteEvent")
+    and TransferState.GiftWatcherConnected ~= true then
+
+        giftRemote.OnClientEvent:Connect(function(...)
+
+            local args = { ... }
+            local giftId = ""
+            local senderPlayer = nil
+
+            if type(args[1]) == "string" then
+
+                local action =
+                    TransferCleanText(args[1])
+
+                if action == "IncomingGift"
+                or action == "GiftRequest"
+                or action == "ReceiveGift"
+                or action == "PromptGift" then
+                    giftId =
+                        TransferCleanText(args[2])
+
+                    if typeof(args[3]) == "Instance"
+                    and args[3]:IsA("Player") then
+                        senderPlayer =
+                            args[3]
+                    end
+                end
+            end
+
+            for _, arg in ipairs(args) do
+
+                if type(arg) == "string"
+                and giftId == ""
+                and #arg >= 32
+                and arg:find("-", 1, true) then
+                    giftId =
+                        TransferCleanText(arg)
+                end
+
+                if typeof(arg) == "Instance"
+                and arg:IsA("Player") then
+                    senderPlayer =
+                        arg
+                end
+            end
+
+            if giftId ~= "" then
+                TransferRecordIncomingGift(
+                    giftId,
+                    senderPlayer
+                )
+            end
+        end)
+
+        TransferState.GiftWatcherConnected =
+            true
+    end
+
+    if acceptRemote
+    and acceptRemote:IsA("RemoteEvent")
+    and TransferState.GiftAcceptPromptWatcherConnected ~= true then
+
+        acceptRemote.OnClientEvent:Connect(function(...)
+
+            local args = { ... }
+            local giftId = ""
+
+            for _, arg in ipairs(args) do
+
+                if type(arg) == "string"
+                and #arg >= 32
+                and arg:find("-", 1, true) then
+                    giftId =
+                        TransferCleanText(arg)
+
+                    break
+                end
+            end
+
+            if giftId == ""
+            and type(args[2]) == "string" then
+                giftId =
+                    TransferCleanText(args[2])
+            end
+
+            if giftId ~= "" then
+                TransferRecordIncomingGift(
+                    giftId,
+                    args[3]
+                )
+            end
+        end)
+
+        TransferState.GiftAcceptPromptWatcherConnected =
+            true
+    end
+
+    if NotificationRemote
+    and TransferState.GiftNotificationWatcherConnected ~= true then
+
+        NotificationRemote.OnClientEvent:Connect(function(message)
+
+            if type(message) ~= "string" then
+                return
+            end
+
+            local lower =
+                string.lower(message)
+
+            if not string.find(lower, "gift", 1, true) then
+                return
+            end
+
+            if string.find(lower, "can't", 1, true)
+            or string.find(lower, "cannot", 1, true)
+            or string.find(lower, "unable", 1, true)
+            or string.find(lower, "not gift", 1, true)
+            or string.find(lower, "favorite", 1, true) then
+
+                TransferState.LastGiftError =
+                    message
+
+                if TransferState.Busy == true
+                or TransferState.OutgoingGiftInProgress == true then
+                    TransferState.LastResult =
+                        message
+
+                    TransferRefreshStatus()
+                end
+            end
+        end)
+
+        TransferState.GiftNotificationWatcherConnected =
+            true
+    end
+
+    return TransferState.GiftWatcherConnected == true
+        or TransferState.GiftAcceptPromptWatcherConnected == true
+end
+
+function TransferArmGiftReceiverWorker()
+
+    if TransferGetRole() ~= "Receiver"
+    or TransferIsGiftMode() ~= true then
+        return false
+    end
+
+    TransferConnectGiftWorker()
+
+    if TransferState.GiftWatcherConnected ~= true
+    and TransferState.GiftAcceptPromptWatcherConnected ~= true then
+        TransferState.Status =
+            "Gift Receiver Unavailable"
+
+        TransferState.LastResult =
+            "PetGiftingService / AcceptPetGift were not found."
+
+        TransferRefreshStatus()
+
+        return false
+    end
+
+    TransferState.Status =
+        "Gift Receiver Armed"
+
+    TransferState.LastResult =
+        "Waiting for gifts from "
+        .. tostring(TransferState.TargetPlayerName)
+        .. "."
+
+    TransferRefreshStatus()
+
+    if TransferState.AutoConfirmAccept == true
+    and TransferCleanText(TransferState.IncomingGiftId) ~= "" then
+        task.defer(function()
+            TransferAutoAcceptIncomingGift()
+        end)
+    end
+
+    return true
+end
+
+function TransferSendOneGift(target, pet)
+
+    TransferState.LastGiftError =
+        ""
+
+    if TransferState.AutoUnfavorite == true then
+
+        local favoritesPrepared, favoriteResult =
+            TransferPrepareBatchFavorites({ pet })
+
+        if not favoritesPrepared then
+            return false, favoriteResult
+        end
+    end
+
+    local equipped, equipResult =
+        TransferEquipPetTool(pet)
+
+    if not equipped then
+        return false, equipResult
+    end
+
+    TransferState.OutgoingGiftInProgress =
+        true
+
+    TransferState.Status =
+        "Gifting Pet"
+
+    TransferState.LastResult =
+        "Sending "
+        .. tostring(pet.PetName)
+        .. " to "
+        .. tostring(target.Name)
+        .. " | "
+        .. TransferGetProgressText()
+
+    TransferRefreshStatus()
+
+    local gifted, giftResult =
+        TransferFireGiftRemote(
+            "GivePet",
+            target
+        )
+
+    if not gifted then
+        TransferState.OutgoingGiftInProgress =
+            false
+
+        return false, giftResult
+    end
+
+    local removed =
+        TransferWaitForSinglePetRemoval(
+            pet,
+            20
+        )
+
+    TransferState.OutgoingGiftInProgress =
+        false
+
+    if not removed then
+        return false, TransferCleanText(TransferState.LastGiftError) ~= ""
+            and TransferState.LastGiftError
+            or "Pet was not gifted in time."
+    end
+
+    return true, "Gift sent."
+end
+
+function TransferSendFilteredGifts()
+
+    if TransferState.Busy == true then
+        return false, "A transfer is already running."
+    end
+
+    if TransferState.DryRun == true then
+        return false, "Dry Run is ON. No gift was sent."
+    end
+
+    if TransferIsGiftMode() ~= true then
+        return false, "Gift System is only available in Grow a Garden."
+    end
+
+    if TransferGetRole() == "Receiver" then
+        return false, "Receiver mode is active. Select at least one pet to send."
+    end
+
+    TransferState.Busy =
+        true
+
+    TransferState.SentThisSession =
+        0
+
+    TransferState.PlannedPetCount =
+        0
+
+    TransferState.BatchNumber =
+        0
+
+    TransferState.ConsecutiveFailures =
+        0
+
+    TransferState.CompletedPetUUIDs =
+        {}
+
+    TransferState.LastGiftError =
+        ""
+
+    local function Finish(success, status, result)
+
+        TransferState.Busy =
+            false
+
+        TransferState.OutgoingGiftInProgress =
+            false
+
+        TransferState.Status =
+            tostring(status or "Stopped")
+
+        TransferState.LastResult =
+            tostring(result or "Unknown result.")
+
+        TransferRefreshStatus()
+
+        return success, TransferState.LastResult
+    end
+
+    local target =
+        TransferResolveTargetPlayer()
+
+    if not target then
+        return Finish(false, "Gift Failed", "Choose a target player in this server.")
+    end
+
+    TransferConnectGiftWorker()
+
+    if TransferGetGiftRemote() == nil then
+        return Finish(false, "Gift Failed", "PetGiftingService was not found.")
+    end
+
+    local startingMatches =
+        TransferBuildRemainingMatches()
+
+    local totalToSend =
+        TransferResolveSendQuantity(
+            #startingMatches
+        )
+
+    TransferState.PlannedPetCount =
+        totalToSend
+
+    if totalToSend == 0 then
+        return Finish(false, "Gift Failed", "No owned pets match the selected filters.")
+    end
+
+    while IsCurrentRun() do
+
+        target =
+            TransferResolveTargetPlayer()
+
+        if not target then
+            return Finish(false, "Gift Failed", "Target player left the server.")
+        end
+
+        local remaining =
+            TransferBuildRemainingMatches()
+
+        local remainingToSend =
+            math.max(
+                0,
+                totalToSend
+                - (tonumber(TransferState.SentThisSession) or 0)
+            )
+
+        if remainingToSend == 0 then
+            return Finish(
+                true,
+                "Gift Complete",
+                "Gift Complete: "
+                    .. TransferGetProgressText()
+                    .. " pets gifted."
+            )
+        end
+
+        if #remaining == 0 then
+            return Finish(
+                false,
+                "Gift Stopped",
+                "Only "
+                    .. TransferGetProgressText()
+                    .. " pets remained available to gift."
+            )
+        end
+
+        local pet =
+            remaining[1]
+
+        TransferState.BatchNumber +=
+            1
+
+        TransferState.Status =
+            "Preparing Gift"
+
+        TransferState.LastResult =
+            "Gift "
+            .. tostring(TransferState.BatchNumber)
+            .. ": "
+            .. tostring(pet.PetName)
+            .. " | "
+            .. TransferGetProgressText()
+
+        TransferRefreshStatus()
+
+        local sent, sendResult =
+            TransferSendOneGift(
+                target,
+                pet
+            )
+
+        if sent then
+
+            TransferState.CompletedPetUUIDs[
+                tostring(pet.UUID or "")
+            ] = true
+
+            TransferState.SentThisSession +=
+                1
+
+            TransferState.ConsecutiveFailures =
+                0
+
+            TransferState.Status =
+                "Gift Sent"
+
+            TransferState.LastResult =
+                "Gifted "
+                .. tostring(pet.PetName)
+                .. " | "
+                .. TransferGetProgressText()
+
+            TransferRefreshStatus()
+
+            task.wait(0.75)
+
+        else
+
+            TransferState.ConsecutiveFailures +=
+                1
+
+            local reason =
+                tostring(sendResult or "Unknown gift error.")
+
+            if TransferState.ConsecutiveFailures >= 3 then
+                return Finish(
+                    false,
+                    "Gift Stopped",
+                    "Stopped after 3 failed gifts: "
+                        .. reason
+                )
+            end
+
+            TransferState.Status =
+                "Retrying Gift"
+
+            TransferState.LastResult =
+                "Gift failed ("
+                .. tostring(TransferState.ConsecutiveFailures)
+                .. "/3): "
+                .. reason
+
+            TransferRefreshStatus()
+
+            task.wait(1)
+        end
+    end
+
+    return Finish(false, "Gift Stopped", "Runtime stopped.")
 end
 
 --==================================================
@@ -24961,7 +25985,9 @@ if Tabs.Transfer then
 
     TransferActionsBox =
         Tabs.Transfer:AddRightGroupbox(
-            "🎁 Trade Actions",
+            IsGardenWorld()
+            and "🎁 Gifting/Trade Actions"
+            or "🎁 Trade Actions",
             "gift"
         )
 
@@ -25276,11 +26302,53 @@ if Tabs.Transfer then
         end,
     })
 
+    local TransferSystemModeDropdown =
+        TransferActionsBox:AddDropdown(
+            "TransferSystemMode",
+            {
+                Text = "System Mode",
+                Tooltip = "Grow a Garden only. Trade System sends trade tickets. Gift System gifts pets one by one.",
+                Values = {
+                    "Gift System",
+                    "Trade System",
+                },
+                Default = TransferState.SystemMode,
+                Multi = false,
+            }
+        )
+
+    TransferState.SystemModeDropdownRef =
+        TransferSystemModeDropdown
+
+    TransferSystemModeDropdown:OnChanged(function(value)
+
+        TransferState.SystemMode =
+            TransferCleanText(value)
+
+        TransferState.LastActionsLayoutKey =
+            ""
+
+        if TransferGetRole() == "Receiver" then
+
+            if TransferIsGiftMode() then
+                TransferArmGiftReceiverWorker()
+            else
+                TransferArmReceiverWorker()
+            end
+        else
+            TransferRefreshStatus()
+        end
+
+        if type(MarkConfigDirty) == "function" then
+            MarkConfigDirty()
+        end
+    end)
+
     TransferActionsBox:AddToggle(
         "TransferAutoConfirmAccept",
         {
             Text = "Auto Confirm / Accept",
-            Tooltip = "Target + no pets = receiver mode; it accepts and confirms trades from that target automatically. Target + pets = sender mode.",
+            Tooltip = "Trade System: auto accept trade tickets and confirm trades. Gift System: auto accept incoming pet gifts when no other gift is in progress.",
             Default = false,
         }
     ):OnChanged(function(value)
@@ -25291,8 +26359,19 @@ if Tabs.Transfer then
         if TransferState.AutoConfirmAccept == true then
 
             if TransferGetRole() == "Receiver" then
-                TransferArmReceiverWorker()
 
+                if TransferIsGiftMode() then
+                    TransferArmGiftReceiverWorker()
+                else
+                    TransferArmReceiverWorker()
+                end
+
+            elseif TransferIsGiftMode() then
+                TransferState.Status =
+                    "Auto Gift Armed"
+
+                TransferState.LastResult =
+                    "Incoming pet gifts will be accepted automatically when idle."
             elseif TransferConnectTradeWorker() then
                 TransferState.Status =
                     "Auto Trade Armed"
@@ -25339,9 +26418,12 @@ if Tabs.Transfer then
         end,
     })
 
-    TransferActionsBox:AddButton({
-        Text = "🎁 Send Filtered Trade",
-        Tooltip = "Dry Run ON previews only. OFF sends a trade ticket and adds matching pets after the target accepts.",
+    local TransferSendButton =
+        TransferActionsBox:AddButton({
+        Text = TransferIsGiftMode()
+            and "🎁 Send Filtered Gifts"
+            or "🎁 Send Filtered Trade",
+        Tooltip = "Dry Run ON previews only. OFF sends using the selected system mode.",
         Func = function()
 
             if TransferState.DryRun == true then
@@ -25352,7 +26434,9 @@ if Tabs.Transfer then
                     "Preview only"
 
                 TransferState.LastResult =
-                    "Dry Run is ON. No trade was sent."
+                    TransferIsGiftMode()
+                    and "Dry Run is ON. No gift was sent."
+                    or "Dry Run is ON. No trade was sent."
 
                 TransferRefreshStatus()
 
@@ -25361,8 +26445,15 @@ if Tabs.Transfer then
 
             task.spawn(function()
 
-                local ok, result =
-                    TransferSendFilteredTrade()
+                local ok, result
+
+                if TransferIsGiftMode() then
+                    ok, result =
+                        TransferSendFilteredGifts()
+                else
+                    ok, result =
+                        TransferSendFilteredTrade()
+                end
 
                 if type(ZanjiNotify) == "function" then
                     ZanjiNotify(
@@ -25377,6 +26468,9 @@ if Tabs.Transfer then
             end)
         end,
     })
+
+    TransferState.SendButtonRef =
+        TransferSendButton
 
     TransferStatusBox:AddLabel(
         "Trade Summary",
@@ -25403,6 +26497,12 @@ if Tabs.Transfer then
     TransferState.MatchedLabel =
         TransferStatusBox:AddLabel(
             "Matching Pets: 0 | Quantity: All matching pets",
+            true
+        )
+
+    TransferState.FavoritesLabel =
+        TransferStatusBox:AddLabel(
+            "Favorites: 0 favorited | 0 not favorited",
             true
         )
 
@@ -25474,9 +26574,23 @@ if Tabs.Transfer then
     end)
 
     if TransferGetRole() == "Receiver" then
-        TransferArmReceiverWorker()
+
+        if TransferIsGiftMode() then
+            TransferArmGiftReceiverWorker()
+        else
+            TransferArmReceiverWorker()
+        end
     else
         TransferRefreshStatus()
+    end
+
+    TransferApplyActionsLayout()
+
+    if TransferState.SystemModeDropdownRef
+    and type(TransferState.SystemModeDropdownRef.SetVisible) == "function" then
+        TransferState.SystemModeDropdownRef:SetVisible(
+            IsGardenWorld()
+        )
     end
 end
 --==================================================
