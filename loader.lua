@@ -1,5 +1,5 @@
 --==================================================
--- ZANJI LOADER 
+-- ZANJI LOADER v2
 -- Server-auth key gate runs before ZanjiV3.lua is fetched/executed.
 -- Supports:
 -- - Backend key verification
@@ -42,7 +42,7 @@ local ZANJI_LOADER_KEY_STATE = {
 
     -- Paste your NEW auth Google Apps Script Web App URL here.
     -- This is NOT the usage tracker URL.
-    AuthURL = "https://script.google.com/macros/s/AKfycbxiSNNFg9L5bYUz8SURPuSSkuHq3CYap4yOecI89UC9SVCV-bHLjGF971sJ52TGPCi8mg/exec",
+    AuthURL = "https://script.google.com/macros/s/AKfycbzn7MwnnbJAakW0HjJ6PE89Ue_jw9F2CDyoqI1xgKuw9ycV-hGNksxtzOAU9Q8Zf8JKTQ/exec
 
     -- Must match the secret inside your auth Apps Script.
     Secret = "zanjilangmalakas",
@@ -897,10 +897,10 @@ print(
 local ZANJI_USAGE_TRACKER = {
     Enabled = true,
 
-    URL = "https://script.google.com/macros/s/AKfycbz_Vz9IPWZ0xJxn-LIPeyWEzT896aDhEE4XxWcGXKFRBFnIrM59JleiV41BZ0kL8EOp/exec",
+    URL = "https://script.google.com/macros/s/AKfycbzn7MwnnbJAakW0HjJ6PE89Ue_jw9F2CDyoqI1xgKuw9ycV-hGNksxtzOAU9Q8Zf8JKTQ/exec
 
     -- Must match the SECRET in your usage tracker Apps Script.
-    Secret = "ZANJI-TRACK-BEN-94582",
+    Secret = "zanjilangmalakas",
 
     Version = "v3.4.5",
 
