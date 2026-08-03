@@ -1,5 +1,5 @@
 --==================================================
--- ZANJI LOADER v2
+-- ZANJI LOADER 
 -- Server-auth key gate runs before ZanjiV3.lua is fetched/executed.
 -- Supports:
 -- - Backend key verification
@@ -42,7 +42,7 @@ local ZANJI_LOADER_KEY_STATE = {
 
     -- Paste your NEW auth Google Apps Script Web App URL here.
     -- This is NOT the usage tracker URL.
-    AuthURL = "https://script.google.com/macros/s/AKfycbz940kY8xU0x5NiVmX33rcmT5EPRiTq7WGzZpEx5_17jJ98HWmoQwHmPfmHgp0Ynv9rTg/exec",
+    AuthURL = "https://script.google.com/macros/s/AKfycbxiSNNFg9L5bYUz8SURPuSSkuHq3CYap4yOecI89UC9SVCV-bHLjGF971sJ52TGPCi8mg/exec",
 
     -- Must match the secret inside your auth Apps Script.
     Secret = "zanjilangmalakas",
