@@ -2296,107 +2296,6 @@ function ResolvePetIconAssetId(petName)
     return nil
 end
 
-MarketTrackerPetImageOverrides = {
-
-    ["Ghostly Spider"] =
-        "https://static.wikia.nocookie.net/growagarden/images/a/a3/GhostlySpider.png/revision/latest?cb=20251014124843",
-
-    ["Albino Peacock"] =
-        "https://static.wikia.nocookie.net/growagarden/images/9/92/AlbinoPeacock.png/revision/latest?cb=20251227043649",
-
-    ["Blue Whale"] =
-        "https://static.wikia.nocookie.net/growagarden/images/c/c5/BlueWhale.png/revision/latest?cb=20251227044221",
-
-    ["Ghostly Headless Horseman"] =
-        "https://static.wikia.nocookie.net/growagarden/images/c/c0/GhostlyHeadlessHorseman.png/revision/latest?cb=20251014124925",
-
-    ["Rainbow Elephant"] =
-        "https://static.wikia.nocookie.net/growagarden/images/0/06/RainbowElephant.png/revision/latest?cb=20251101093454",
-
-    ["Raccoon"] =
-        "https://static.wikia.nocookie.net/growagarden/images/5/54/Raccon_Better_Quality.png/revision/latest?cb=20260121085435",
-
-    ["Kitsune"] =
-        "https://static.wikia.nocookie.net/growagarden/images/0/04/Kitsune.png/revision/latest?cb=20250918145223",
-
-    ["Mimic Octopus"] =
-        "https://static.wikia.nocookie.net/growagarden/images/1/15/MimicOctopusImage.png/revision/latest?cb=20250806125636",
-
-    ["Rainbow Birb"] =
-        "https://static.wikia.nocookie.net/growagarden/images/1/13/RainbowBirb.png/revision/latest?cb=20260117041633",
-
-    ["Rainbow Dilophosaurus"] =
-        "https://static.wikia.nocookie.net/growagarden/images/d/d8/RainbowDilophosaurus.png/revision/latest?cb=20250806131700",
-    
-    ["Giant Scorpion"] =
-        "https://static.wikia.nocookie.net/growagarden/images/b/b2/GiantScorpion.png/revision/latest?cb=20251227045639",
-
-    ["Seal"] =
-        "https://static.wikia.nocookie.net/growagarden/images/f/f9/SealIcon.webp/revision/latest?cb=20250621135446",
-
-    ["Rainbow Monitor Lizard"] =
-        "https://static.wikia.nocookie.net/growagarden/images/e/e8/RainbowMonitorLizard.png/revision/latest?cb=20260521070025",
-
-    ["Gilded Choc Peryton"] =
-        "https://static.wikia.nocookie.net/growagarden/images/7/75/GildedChocPeryton.png/revision/latest?cb=20260418085707",
-
-    ["Ruby Squid"] =
-        "https://static.wikia.nocookie.net/growagarden/images/2/21/RubySquid.png/revision/latest?cb=20251115032216",
-
-    ["Dilophosaurus"] =
-        "https://static.wikia.nocookie.net/growagarden/images/3/3c/Dilophosaurus.png/revision/latest?cb=20250712071322",
-
-    ["Orangutan"] =
-        "https://static.wikia.nocookie.net/growagarden/images/4/47/OrangutanIcon.webp/revision/latest?cb=20250621135443",
-
-    ["Ostrich"] =
-        "https://static.wikia.nocookie.net/growagarden/images/8/89/OstrichImage.png/revision/latest?cb=20250806125148",
-
-    ["Peacock"] =
-        "https://static.wikia.nocookie.net/growagarden/images/6/61/Peacock.png/revision/latest?cb=20260121090518",
-
-    ["Butterfly"] =
-        "https://static.wikia.nocookie.net/growagarden/images/1/18/Thy_Butterfly_V2.png/revision/latest?cb=20250806112723",
-
-    ["Disco Bee"] =
-        "https://static.wikia.nocookie.net/growagarden/images/f/f2/DiscoBeeIcon.gif/revision/latest?cb=20250806112507",
-
-    ["Elephant"] =
-        "https://static.wikia.nocookie.net/growagarden/images/6/60/Elephant.png/revision/latest?cb=20251101072634",
-    
-    ["Hedgehog"] =
-        "https://static.wikia.nocookie.net/growagarden/images/2/26/HedgehogRender.png/revision/latest?cb=20250806124408",
-
-    ["Mole"] =
-        "https://static.wikia.nocookie.net/growagarden/images/9/94/MoleRender.png/revision/latest?cb=20250806124338",
-
-    ["Frog"] =
-        "https://static.wikia.nocookie.net/growagarden/images/c/c8/FrogRender.png/revision/latest?cb=20250806124301",
-
-    ["Echo Frog"] =
-        "https://static.wikia.nocookie.net/growagarden/images/5/5c/EchoFrogRender.png/revision/latest?cb=20250806124229",
-
-    ["Night Owl"] =
-        "https://static.wikia.nocookie.net/growagarden/images/d/de/NightOwlRender.png/revision/latest?cb=20250806124107",
-
-    ["Flamingo"] =
-        "https://static.wikia.nocookie.net/growagarden/images/e/ec/FlamingoIcon.webp/revision/latest?cb=20250621135449",
-
-    ["Toucan"] =
-        "https://static.wikia.nocookie.net/growagarden/images/1/10/ToucanIcon.webp/revision/latest?cb=20250621135448",
-
-    ["Sea Turtle"] =
-    "https://static.wikia.nocookie.net/growagarden/images/a/ad/SeaTurtleIcon.webp/revision/latest?cb=20250621135447",
-
-    ["Rainbow Spinosaurus"] =
-        "https://static.wikia.nocookie.net/growagarden/images/e/e7/RainbowSpinosaurusIcon.png/revision/latest?cb=20250806131216",
-
-    ["Spinosaurus"] =
-        "https://static.wikia.nocookie.net/growagarden/images/2/24/Spinosaurus.png/revision/latest?cb=20250712071322",
-
-    
-}
-
 function ResolvePetIconThumbnailUrl(petName)
 
     petName =
@@ -2430,55 +2329,6 @@ function ResolvePetIconThumbnailUrl(petName)
     end
 
     return ResolveRobloxAssetThumbnailUrl(assetId)
-end
-
---==================================================
--- WEBHOOK PET IMAGE HELPER
--- Reuses Market Tracker image overrides for every webhook.
--- Accepts clean base pet names, confirmed tool names, or sale tables.
---==================================================
-
-function ApplyPetThumbnailToEmbed(embed, petName)
-
-    if type(embed) ~= "table" then
-        return false
-    end
-
-    petName =
-        tostring(petName or "")
-            :gsub("^%s+", "")
-            :gsub("%s+$", "")
-
-    if petName == "" then
-        return false
-    end
-
-    local imageUrl =
-        nil
-
-    if type(ResolvePetIconThumbnailUrl) == "function" then
-
-        local ok, result =
-            pcall(function()
-                return ResolvePetIconThumbnailUrl(petName)
-            end)
-
-        if ok
-        and type(result) == "string"
-        and result ~= "" then
-            imageUrl = result
-        end
-    end
-
-    if not imageUrl then
-        return false
-    end
-
-    embed.thumbnail = {
-        url = imageUrl,
-    }
-
-    return true
 end
 
 function ResolveWebhookBasePetName(primaryName, fallbackName)
@@ -4574,6 +4424,7 @@ TransferState = {
     SystemMode = "Gift System",
 
     GiftWatcherConnected = false,
+    GiftPetWatcherConnected = false,
     GiftAcceptPromptWatcherConnected = false,
     GiftNotificationWatcherConnected = false,
     OutgoingGiftInProgress = false,
@@ -5477,10 +5328,10 @@ MarketTrackerTargets = {
         -- <= GoodPrice   = ✅ Good / green
         -- <= MaxPrice    = ⚖️ Fair / yellow
         -- > MaxPrice     = ❌ Overpriced / red
-        MaxPrice = 18000,
-        GoodPrice = 12000,
-        SnipePrice = 10000,
-        PingBelow = 10000,
+        MaxPrice = 50000,
+        GoodPrice = 30000,
+        SnipePrice = 15000,
+        PingBelow = 15000,
 
         MinWeight = 0,
     },
@@ -5489,9 +5340,9 @@ MarketTrackerTargets = {
         Type = "Rare",
         Emoji = "🐘",
 
-        MaxPrice = 500000,
-        GoodPrice = 250000,
-        SnipePrice = 200000,
+        MaxPrice = 2000000,
+        GoodPrice = 500000,
+        SnipePrice = 250000,
         PingBelow = 00000,
 
         MinWeight = 0,
@@ -5501,10 +5352,10 @@ MarketTrackerTargets = {
         Type = "Rare",
         Emoji = "🐦",
 
-        MaxPrice = 20000,
-        GoodPrice = 15000,
-        SnipePrice = 13000,
-        PingBelow = 13000,
+        MaxPrice = 50000,
+        GoodPrice = 40000,
+        SnipePrice = 30000,
+        PingBelow = 30000,
 
         MinWeight = 0,
     },
@@ -5513,10 +5364,10 @@ MarketTrackerTargets = {
         Type = "Rare",
         Emoji = "🦖",
 
-        MaxPrice = 20000,
-        GoodPrice = 15000,
-        SnipePrice = 13000,
-        PingBelow = 13000,
+        MaxPrice = 60000,
+        GoodPrice = 30000,
+        SnipePrice = 25000,
+        PingBelow = 25000,
 
         MinWeight = 0,
     },
@@ -8634,6 +8485,137 @@ function TransferCleanText(value)
         :gsub("%s+$", "")
 end
 
+-- Hides the game's one-time incoming-request card after we have already
+-- accepted it through its remote.  The game sometimes leaves these cards
+-- visible even though the request has been consumed, which blocks the view
+-- with a stale "Gift From" or trade-request prompt.
+function TransferDismissAcceptedRequestPrompt(requestType)
+
+    local player =
+        Players.LocalPlayer
+
+    local playerGui =
+        player
+        and player:FindFirstChild("PlayerGui")
+
+    if not playerGui then
+        return 0
+    end
+
+    local kind =
+        TransferCleanText(requestType):lower()
+
+    local textMarkers =
+        kind == "gift"
+        and {
+            "gift from",
+            "gift request",
+            "accept gift",
+        }
+        or {
+            "trade request",
+            "requested a trade",
+            "wants to trade",
+            "trade invite",
+        }
+
+    local nameMarkers =
+        kind == "gift"
+        and {
+            "gift",
+            "request",
+            "prompt",
+        }
+        or {
+            "trade",
+            "request",
+            "prompt",
+        }
+
+    local hidden = 0
+    local hiddenObjects = {}
+
+    for _, label in ipairs(playerGui:GetDescendants()) do
+
+        if not label:IsA("TextLabel")
+        and not label:IsA("TextButton") then
+            continue
+        end
+
+        local text =
+            TransferCleanText(label.Text):lower()
+
+        local matchedText = false
+
+        for _, marker in ipairs(textMarkers) do
+
+            if text:find(marker, 1, true) then
+                matchedText = true
+                break
+            end
+        end
+
+        if not matchedText then
+            continue
+        end
+
+        -- Prefer a specifically named prompt/request ancestor.  This keeps
+        -- the hide scoped to the request card rather than an entire ScreenGui.
+        local candidate =
+            label.Parent
+            and label.Parent:IsA("GuiObject")
+            and label.Parent
+            or label
+
+        local current = label
+
+        while current
+        and current ~= playerGui do
+
+            local lowerName =
+                tostring(current.Name or ""):lower()
+
+            local matchedName = false
+
+            for _, marker in ipairs(nameMarkers) do
+
+                if lowerName:find(marker, 1, true) then
+                    candidate = current
+                    matchedName = true
+                    break
+                end
+            end
+
+            if matchedName then
+                break
+            end
+
+            current = current.Parent
+        end
+
+        if candidate:IsA("GuiObject")
+        and hiddenObjects[candidate] ~= true then
+
+            candidate.Visible = false
+            hiddenObjects[candidate] = true
+            hidden += 1
+        end
+    end
+
+    return hidden
+end
+
+function TransferDismissAcceptedRequestPromptSoon(requestType)
+
+    -- The game's GUI can replicate a fraction of a second after the remote,
+    -- so clear it now and once more after its UI update arrives.
+    TransferDismissAcceptedRequestPrompt(requestType)
+
+    task.delay(0.25, function()
+        TransferDismissAcceptedRequestPrompt(requestType)
+    end)
+end
+
 function TransferCloneSelectedMap(source)
 
     local output = {}
@@ -9632,13 +9614,10 @@ function TransferApplyActionsLayout()
         end
     end
 
-    if TransferGetRole() == "Receiver" then
-
-        if TransferIsGiftMode() then
-            TransferArmGiftReceiverWorker()
-        else
-            TransferArmReceiverWorker()
-        end
+    if TransferIsGiftMode() then
+        TransferArmGiftReceiverWorker()
+    else
+        TransferArmReceiverWorker()
     end
 end
 
@@ -9657,6 +9636,18 @@ function TransferGetGiftRemote()
         and gameEvents:FindFirstChild("PetGiftingService")
 end
 
+function TransferGetIncomingGiftRemote()
+
+    local gameEvents =
+        ReplicatedStorage:FindFirstChild("GameEvents")
+
+    return gameEvents
+        and (
+            gameEvents:FindFirstChild("GiftPet")
+            or gameEvents:FindFirstChild("PetGiftingService")
+        )
+end
+
 function TransferGetAcceptGiftRemote()
 
     local gameEvents =
@@ -9664,6 +9655,23 @@ function TransferGetAcceptGiftRemote()
 
     return gameEvents
         and gameEvents:FindFirstChild("AcceptPetGift")
+end
+
+function TransferIsGiftIdString(value)
+
+    if type(value) ~= "string" then
+        return false
+    end
+
+    local text =
+        TransferCleanText(value)
+
+    if #text < 32
+    or not text:find("-", 1, true) then
+        return false
+    end
+
+    return text:match("^[%da-fA-F%-]+$") ~= nil
 end
 
 function TransferFireGiftRemote(...)
@@ -9700,12 +9708,14 @@ function TransferFireAcceptGiftRemote(accept, giftId)
         return false, "Missing AcceptPetGift remote."
     end
 
+    local payload = {
+        [1] = accept == true,
+        [2] = TransferCleanText(giftId),
+    }
+
     local ok, err =
         pcall(function()
-            remote:FireServer(
-                accept == true,
-                TransferCleanText(giftId)
-            )
+            remote:FireServer(table.unpack(payload))
         end)
 
     if not ok then
@@ -9827,7 +9837,9 @@ function TransferIncomingGiftMatchesTarget()
 
     if targetUserId > 0
     and senderUserId > 0 then
-        return targetUserId == senderUserId
+        if targetUserId == senderUserId then
+            return true
+        end
     end
 
     local targetName =
@@ -9840,12 +9852,87 @@ function TransferIncomingGiftMatchesTarget()
             TransferState.IncomingGiftPlayerName
         ):lower()
 
-    return targetName ~= ""
-        and senderName ~= ""
-        and targetName == senderName
+    if senderName ~= "" then
+        return targetName ~= ""
+            and targetName == senderName
+    end
+
+    -- Only accept gifts whose sender can be matched to the selected target.
+    return false
 end
 
-function TransferRecordIncomingGift(giftId, senderPlayer)
+function TransferGetGiftSenderDetails(sender)
+
+    if typeof(sender) == "Instance"
+    and sender:IsA("Player") then
+        return tostring(sender.Name or ""), tonumber(sender.UserId) or 0
+    end
+
+    if type(sender) == "string" then
+        local senderName = TransferCleanText(sender)
+        local player = Players:FindFirstChild(senderName)
+
+        return senderName,
+            player and tonumber(player.UserId) or 0
+    end
+
+    if type(sender) == "table" then
+        return TransferCleanText(
+            sender.Name or sender.PlayerName or sender.SenderName
+        ), tonumber(
+            sender.UserId or sender.PlayerUserId or sender.SenderUserId
+        ) or 0
+    end
+
+    return "", 0
+end
+
+function TransferExtractIncomingGift(args)
+
+    local giftId = ""
+    local sender = nil
+    local targetName =
+        TransferCleanText(TransferState.TargetPlayerName):lower()
+
+    for _, arg in ipairs(args or {}) do
+        if type(arg) == "string" then
+            if giftId == ""
+            and TransferIsGiftIdString(arg) then
+                giftId = TransferCleanText(arg)
+            elseif sender == nil
+            and (
+                Players:FindFirstChild(arg)
+                or (
+                    targetName ~= ""
+                    and TransferCleanText(arg):lower() == targetName
+                )
+            ) then
+                sender = arg
+            end
+        elseif typeof(arg) == "Instance"
+        and arg:IsA("Player") then
+            sender = arg
+        elseif type(arg) == "table" then
+            local tableGiftId = arg.GiftId or arg.GiftID or arg.Id or arg.ID
+
+            if giftId == ""
+            and type(tableGiftId) == "string" then
+                giftId = TransferCleanText(tableGiftId)
+            end
+
+            sender = sender
+                or arg.Sender
+                or arg.SenderPlayer
+                or arg.Player
+                or arg.From
+                or arg
+        end
+    end
+
+    return giftId, sender
+end
+
+function TransferRecordIncomingGift(giftId, senderPlayer, skipTargetCheck)
 
     giftId =
         TransferCleanText(giftId)
@@ -9855,8 +9942,7 @@ function TransferRecordIncomingGift(giftId, senderPlayer)
         return false
     end
 
-    if TransferState.OutgoingGiftInProgress == true
-    or TransferState.GiftAcceptInProgress == true then
+    if TransferState.GiftAcceptInProgress == true then
         TransferState.LastResult =
             "Incoming gift queued: finish the current gift first."
 
@@ -9868,15 +9954,9 @@ function TransferRecordIncomingGift(giftId, senderPlayer)
     TransferState.IncomingGiftId =
         giftId
 
-    TransferState.IncomingGiftPlayerName =
-        senderPlayer
-        and tostring(senderPlayer.Name or "")
-        or ""
-
-    TransferState.IncomingGiftUserId =
-        senderPlayer
-        and tonumber(senderPlayer.UserId)
-        or 0
+    TransferState.IncomingGiftPlayerName,
+        TransferState.IncomingGiftUserId =
+        TransferGetGiftSenderDetails(senderPlayer)
 
     TransferState.IncomingGiftAt =
         os.clock()
@@ -9894,18 +9974,16 @@ function TransferRecordIncomingGift(giftId, senderPlayer)
 
     TransferRefreshStatus()
 
-    if TransferGetRole() == "Receiver"
-    and TransferState.AutoConfirmAccept == true
-    and TransferIsGiftMode() then
-        task.defer(function()
-            TransferAutoAcceptIncomingGift()
-        end)
+    if TransferState.AutoConfirmAccept == true then
+        TransferAutoAcceptIncomingGift(
+            skipTargetCheck == true
+        )
     end
 
     return true
 end
 
-function TransferAutoAcceptIncomingGift()
+function TransferAutoAcceptIncomingGift(skipTargetCheck)
 
     local giftId =
         TransferCleanText(
@@ -9918,21 +9996,7 @@ function TransferAutoAcceptIncomingGift()
         return false
     end
 
-    if TransferState.AutoConfirmAccept ~= true
-    or TransferGetRole() ~= "Receiver"
-    or TransferIsGiftMode() ~= true then
-        return false
-    end
-
-    if TransferState.OutgoingGiftInProgress == true then
-        TransferState.Status =
-            "Gift Accept Waiting"
-
-        TransferState.LastResult =
-            "Cannot accept yet: an outgoing gift is still in progress."
-
-        TransferRefreshStatus()
-
+    if TransferState.AutoConfirmAccept ~= true then
         return false
     end
 
@@ -9945,7 +10009,8 @@ function TransferAutoAcceptIncomingGift()
         return false
     end
 
-    if TransferIncomingGiftMatchesTarget() ~= true then
+    if skipTargetCheck ~= true
+    and TransferIncomingGiftMatchesTarget() ~= true then
         TransferState.Status =
             "Gift Ignored"
 
@@ -9983,6 +10048,10 @@ function TransferAutoAcceptIncomingGift()
         return false
     end
 
+    TransferDismissAcceptedRequestPromptSoon(
+        "gift"
+    )
+
     TransferState.IncomingGiftsHandled[giftId] =
         true
 
@@ -10012,71 +10081,135 @@ function TransferAutoAcceptIncomingGift()
     return true
 end
 
+function TransferHandleIncomingGiftEvent(...)
+
+    local args = { ... }
+    local giftId = ""
+    local senderPlayer = nil
+    local skipTargetCheck = false
+
+    if TransferIsGiftIdString(args[1]) then
+        giftId =
+            TransferCleanText(args[1])
+
+        if args[3] ~= nil then
+            senderPlayer = args[3]
+        end
+
+        skipTargetCheck = true
+    elseif type(args[1]) == "string" then
+
+        local action =
+            TransferCleanText(args[1])
+
+        if action == "IncomingGift"
+        or action == "GiftRequest"
+        or action == "ReceiveGift"
+        or action == "PromptGift" then
+            giftId =
+                TransferCleanText(args[2])
+
+            if args[3] ~= nil then
+                senderPlayer = args[3]
+            end
+        end
+    end
+
+    for _, arg in ipairs(args) do
+
+        if type(arg) == "string"
+        and giftId == ""
+        and TransferIsGiftIdString(arg) then
+            giftId =
+                TransferCleanText(arg)
+        end
+
+        if typeof(arg) == "Instance"
+        and arg:IsA("Player") then
+            senderPlayer =
+                arg
+        elseif senderPlayer == nil
+        and type(arg) == "table" then
+            senderPlayer = arg
+        elseif senderPlayer == nil
+        and type(arg) == "string"
+        and arg ~= giftId
+        and not TransferIsGiftIdString(arg)
+        and Players:FindFirstChild(arg) then
+            senderPlayer = arg
+        elseif senderPlayer == nil
+        and type(arg) == "string"
+        and arg ~= giftId
+        and not TransferIsGiftIdString(arg)
+        and not string.find(arg, "%[", 1, true)
+        and #TransferCleanText(arg) > 0
+        and #TransferCleanText(arg) <= 32 then
+            senderPlayer = arg
+        end
+    end
+
+    local parsedGiftId, parsedSender =
+        TransferExtractIncomingGift(args)
+
+    if parsedGiftId ~= "" then
+        giftId = parsedGiftId
+    end
+
+    senderPlayer = senderPlayer or parsedSender
+
+    if giftId ~= "" then
+        TransferRecordIncomingGift(
+            giftId,
+            senderPlayer,
+            skipTargetCheck
+        )
+    end
+end
+
+function TransferConnectIncomingGiftRemote(remote, connectedFlag)
+
+    if not remote
+    or not remote:IsA("RemoteEvent")
+    or TransferState[connectedFlag] == true then
+        return false
+    end
+
+    remote.OnClientEvent:Connect(
+        TransferHandleIncomingGiftEvent
+    )
+
+    TransferState[connectedFlag] =
+        true
+
+    return true
+end
+
 function TransferConnectGiftWorker()
 
-    local giftRemote =
-        TransferGetGiftRemote()
+    local gameEvents =
+        ReplicatedStorage:FindFirstChild("GameEvents")
+
+    local giftPetRemote =
+        gameEvents
+        and gameEvents:FindFirstChild("GiftPet")
+
+    local petGiftingRemote =
+        gameEvents
+        and gameEvents:FindFirstChild("PetGiftingService")
 
     local acceptRemote =
         TransferGetAcceptGiftRemote()
 
-    if giftRemote
-    and giftRemote:IsA("RemoteEvent")
-    and TransferState.GiftWatcherConnected ~= true then
+    TransferConnectIncomingGiftRemote(
+        giftPetRemote,
+        "GiftPetWatcherConnected"
+    )
 
-        giftRemote.OnClientEvent:Connect(function(...)
-
-            local args = { ... }
-            local giftId = ""
-            local senderPlayer = nil
-
-            if type(args[1]) == "string" then
-
-                local action =
-                    TransferCleanText(args[1])
-
-                if action == "IncomingGift"
-                or action == "GiftRequest"
-                or action == "ReceiveGift"
-                or action == "PromptGift" then
-                    giftId =
-                        TransferCleanText(args[2])
-
-                    if typeof(args[3]) == "Instance"
-                    and args[3]:IsA("Player") then
-                        senderPlayer =
-                            args[3]
-                    end
-                end
-            end
-
-            for _, arg in ipairs(args) do
-
-                if type(arg) == "string"
-                and giftId == ""
-                and #arg >= 32
-                and arg:find("-", 1, true) then
-                    giftId =
-                        TransferCleanText(arg)
-                end
-
-                if typeof(arg) == "Instance"
-                and arg:IsA("Player") then
-                    senderPlayer =
-                        arg
-                end
-            end
-
-            if giftId ~= "" then
-                TransferRecordIncomingGift(
-                    giftId,
-                    senderPlayer
-                )
-            end
-        end)
-
-        TransferState.GiftWatcherConnected =
-            true
+    if petGiftingRemote ~= giftPetRemote then
+        TransferConnectIncomingGiftRemote(
+            petGiftingRemote,
+            "GiftWatcherConnected"
+        )
     end
 
     if acceptRemote
@@ -10091,8 +10224,7 @@ function TransferConnectGiftWorker()
             for _, arg in ipairs(args) do
 
                 if type(arg) == "string"
-                and #arg >= 32
-                and arg:find("-", 1, true) then
+                and TransferIsGiftIdString(arg) then
                     giftId =
                         TransferCleanText(arg)
 
@@ -10106,10 +10238,18 @@ function TransferConnectGiftWorker()
                     TransferCleanText(args[2])
             end
 
+            local parsedGiftId, parsedSender =
+                TransferExtractIncomingGift(args)
+
+            if parsedGiftId ~= "" then
+                giftId = parsedGiftId
+            end
+
             if giftId ~= "" then
                 TransferRecordIncomingGift(
                     giftId,
-                    args[3]
+                    parsedSender or args[3],
+                    true
                 )
             end
         end)
@@ -10158,19 +10298,16 @@ function TransferConnectGiftWorker()
     end
 
     return TransferState.GiftWatcherConnected == true
+        or TransferState.GiftPetWatcherConnected == true
         or TransferState.GiftAcceptPromptWatcherConnected == true
 end
 
 function TransferArmGiftReceiverWorker()
 
-    if TransferGetRole() ~= "Receiver"
-    or TransferIsGiftMode() ~= true then
-        return false
-    end
-
     TransferConnectGiftWorker()
 
     if TransferState.GiftWatcherConnected ~= true
+    and TransferState.GiftPetWatcherConnected ~= true
     and TransferState.GiftAcceptPromptWatcherConnected ~= true then
         TransferState.Status =
             "Gift Receiver Unavailable"
@@ -10626,6 +10763,70 @@ function TransferEquipTradeTicket()
     return false, "Trading Ticket did not equip."
 end
 
+function TransferExtractIncomingTradeRequest(args)
+
+    local requestId = ""
+    local sender = nil
+
+    for _, arg in ipairs(args or {}) do
+        if typeof(arg) == "Instance"
+        and arg:IsA("Player") then
+            sender = arg
+        elseif type(arg) == "table" then
+            local tableRequestId = arg.RequestId or arg.RequestID or arg.Id or arg.ID
+
+            if requestId == ""
+            and tableRequestId ~= nil then
+                requestId = TransferCleanText(tableRequestId)
+            end
+
+            sender = sender
+                or arg.Sender
+                or arg.SenderPlayer
+                or arg.Player
+                or arg.From
+                or arg
+        elseif type(arg) == "string" then
+            if sender == nil
+            and Players:FindFirstChild(arg) then
+                sender = arg
+            elseif requestId == "" then
+                requestId = TransferCleanText(arg)
+            end
+        elseif type(arg) == "number"
+        and requestId == "" then
+            requestId = tostring(arg)
+        end
+    end
+
+    return requestId, sender
+end
+
+function TransferGetTradeSenderDetails(sender)
+
+    if typeof(sender) == "Instance"
+    and sender:IsA("Player") then
+        return tostring(sender.Name or ""), tonumber(sender.UserId) or 0
+    end
+
+    if type(sender) == "string" then
+        local senderName = TransferCleanText(sender)
+        local player = Players:FindFirstChild(senderName)
+
+        return senderName, player and tonumber(player.UserId) or 0
+    end
+
+    if type(sender) == "table" then
+        return TransferCleanText(
+            sender.Name or sender.PlayerName or sender.SenderName
+        ), tonumber(
+            sender.UserId or sender.PlayerUserId or sender.SenderUserId
+        ) or 0
+    end
+
+    return "", 0
+end
+
 function TransferConnectTradeWorker()
 
     local updateTradeState =
@@ -10684,7 +10885,10 @@ function TransferConnectTradeWorker()
     if hasIncomingRequest
     and TransferState.IncomingRequestWatcherConnected ~= true then
 
-        sendRequest.OnClientEvent:Connect(function(requestId, senderPlayer)
+        sendRequest.OnClientEvent:Connect(function(...)
+
+            local requestId, senderPlayer =
+                TransferExtractIncomingTradeRequest({ ... })
 
             if type(TransferRecordIncomingTradeRequest) == "function" then
                 TransferRecordIncomingTradeRequest(
@@ -10865,10 +11069,6 @@ end
 
 function TransferArmReceiverWorker()
 
-    if TransferGetRole() ~= "Receiver" then
-        return false
-    end
-
     TransferConnectTradeWorker()
 
     if TransferState.IncomingRequestWatcherConnected ~= true then
@@ -10914,8 +11114,11 @@ function TransferIncomingRequestMatchesTarget()
         tonumber(TransferState.IncomingRequestUserId)
         or 0
 
-    if targetUserId > 0 then
-        return senderUserId == targetUserId
+    if targetUserId > 0
+    and senderUserId > 0 then
+        if senderUserId == targetUserId then
+            return true
+        end
     end
 
     local expectedName =
@@ -10942,8 +11145,11 @@ function TransferRecordIncomingTradeRequest(requestId, senderPlayer)
         return false
     end
 
-    if typeof(senderPlayer) ~= "Instance"
-    or not senderPlayer:IsA("Player") then
+    local senderName, senderUserId =
+        TransferGetTradeSenderDetails(senderPlayer)
+
+    if senderName == ""
+    and senderUserId <= 0 then
         return false
     end
 
@@ -10951,11 +11157,10 @@ function TransferRecordIncomingTradeRequest(requestId, senderPlayer)
         requestKey
 
     TransferState.IncomingRequestPlayerName =
-        tostring(senderPlayer.Name)
+        senderName
 
     TransferState.IncomingRequestUserId =
-        tonumber(senderPlayer.UserId)
-        or 0
+        senderUserId
 
     TransferState.IncomingRequestAt =
         os.clock()
@@ -10965,12 +11170,11 @@ function TransferRecordIncomingTradeRequest(requestId, senderPlayer)
 
     TransferState.LastResult =
         "Trade ticket from "
-        .. tostring(senderPlayer.Name)
+        .. tostring(senderName ~= "" and senderName or "unknown")
 
     TransferRefreshStatus()
 
-    if TransferGetRole() == "Receiver"
-    and TransferState.AutoConfirmAccept == true then
+    if TransferState.AutoConfirmAccept == true then
 
         task.defer(function()
             TransferAutoAcceptIncomingRequest()
@@ -10993,8 +11197,7 @@ function TransferAutoAcceptIncomingRequest()
         return false
     end
 
-    if TransferState.AutoConfirmAccept ~= true
-    or TransferGetRole() ~= "Receiver" then
+    if TransferState.AutoConfirmAccept ~= true then
         return false
     end
 
@@ -11074,6 +11277,10 @@ function TransferAutoAcceptIncomingRequest()
         return false
     end
 
+    TransferDismissAcceptedRequestPromptSoon(
+        "trade"
+    )
+
     TransferState.IncomingRequestsHandled[requestId] =
         true
 
@@ -11114,7 +11321,6 @@ function TransferAutoAcceptIncomingRequest()
             os.clock()
 
         while IsCurrentRun()
-        and TransferGetRole() == "Receiver"
         and os.clock() - started < 25 do
 
             if TransferState.TradeOpen == true then
@@ -11151,8 +11357,7 @@ function TransferAutoAcceptIncomingRequest()
             task.wait(0.05)
         end
 
-        if TransferState.TradeOpen ~= true
-        and TransferGetRole() == "Receiver" then
+        if TransferState.TradeOpen ~= true then
             TransferState.Status =
                 "Ticket Not Opened"
 
@@ -14825,7 +15030,7 @@ function BuildBoothSaleWebhookPayload(sale, hideSeller)
         or GetTokenBalance()
 
     if hideSeller then
-        seller = "Zanji Hub"
+        seller = "Hidden"
     end
 
     local payload = {
@@ -14839,7 +15044,7 @@ function BuildBoothSaleWebhookPayload(sale, hideSeller)
                 weight
             ),
             description = string.format(
-                "By User: ||%s||\n\n```ansi\n💰 Sold For: %s\n✨ Token Balance: %s\n```",
+                "By User: **%s**\n\n```ansi\n💰 Sold For: %s\n✨ Token Balance: %s\n```",
                 seller,
                 FormatBoothSaleTokenAmount(soldFor),
                 FormatBoothSaleTokenAmount(tokenBalance)
@@ -14850,11 +15055,6 @@ function BuildBoothSaleWebhookPayload(sale, hideSeller)
             timestamp = DateTime.now():ToIsoDate(),
         }}
     }
-
-    ApplyPetThumbnailToEmbed(
-        payload.embeds[1],
-        petName
-    )
 
     return payload
 end
@@ -15412,19 +15612,19 @@ function ResolveMarketTrackerWeightClass(weight)
         return "Unknown"
     end
 
-    if weight < 1 then
+    if weight < 10 then
         return "Small"
-    elseif weight < 3 then
+    elseif weight < 30 then
         return "Normal"
-    elseif weight < 5 then
+    elseif weight < 50 then
         return "Semi Huge"
-    elseif weight < 7 then
+    elseif weight < 70 then
         return "Huge"
-    elseif weight < 8 then
+    elseif weight < 80 then
         return "Semi Titanic"
-    elseif weight < 9 then
+    elseif weight < 90 then
         return "Titanic"
-    elseif weight < 10 then
+    elseif weight < 100 then
         return "Godly"
     end
 
@@ -15523,13 +15723,6 @@ function BuildMarketTrackerTitle(petName, mutationText, age, displayWeight, base
             displayWeight
         )
 
-    local weightClass =
-        ResolveMarketTrackerWeightClass(
-            -- Semi Titanic / Titanic tiers are based on the pet's raw
-            -- BaseWeight, never its age-scaled current KG.
-            baseWeight
-        )
-
     local finalName =
         tostring(petName or "Unknown")
 
@@ -15559,9 +15752,7 @@ function BuildMarketTrackerTitle(petName, mutationText, age, displayWeight, base
         .. tostring(ageText)
         .. "] ["
         .. tostring(weightText)
-        .. "] ("
-        .. tostring(weightClass)
-        .. ")"
+        .. "]"
 end
 
 function SendMarketTrackerWebhookNow(listing)
@@ -15640,6 +15831,26 @@ function SendMarketTrackerWebhookNow(listing)
     local age =
         tonumber(listing.Age)
 
+    if age then
+        age = math.max(0, math.floor(age))
+    end
+
+    -- Use the actual listing's age and visible KG.  If an older caller only
+    -- supplied raw BaseWeight, convert it using that listed pet's age so the
+    -- webhook never shows the age-1/base KG as the current KG.
+    if baseWeight
+    and age ~= nil
+    and (
+        displayWeight == nil
+        or math.abs(displayWeight - baseWeight) < 0.001
+    ) then
+        displayWeight =
+            ResolveDisplayWeightFromBaseAge(
+                baseWeight,
+                age
+            )
+    end
+
     local deal =
         ResolveMarketTrackerDeal(
             config,
@@ -15677,11 +15888,6 @@ local title =
         config
     )
 
-    local petImageUrl =
-    ResolvePetIconThumbnailUrl(
-        petName
-    )
-
     local webJoinLink =
         "https://www.roblox.com/games/"
         .. tostring(TRADING_WORLD_PLACE_ID)
@@ -15700,27 +15906,13 @@ local title =
         .. tostring(game.JobId)
 
     local description =
-        "**Seller:** "
+        "Listed By: **"
         .. tostring(sellerName)
-        .. "\n"
-        .. "**Price:** "
+        .. "**\n\n```ansi\n💸 Price: "
         .. tostring(priceText)
-        .. " tokens"
-        .. "\n"
-        .. "**Deal:** "
+        .. "\n🔎 Deal: "
         .. tostring(deal.Text)
-        .. "\n"
-        .. "**BaseWeight:** "
-        .. FormatMarketTrackerBaseWeight(baseWeight)
-        .. " KG"
-        .. "\n"
-        .. "**Favorited:** "
-        .. (
-        listing.IsFavorite == true
-        and "Yes"
-        or "No"
-        )
-        .. "\n\n"
+        .. "\n```\n\n"
         .. "**Server:**\n"
         .. "[Open Game]("
         .. webJoinLink
@@ -15738,34 +15930,24 @@ local title =
         
 
 local payload = {
+    username = "Zanji Market Tracker",
     embeds = {{
 
-        title =
-            title,
+        color = 0xF1C40F,
+
+        title = "🔎 Found: " .. title,
 
         description =
             description,
 
-        color =
-            deal.Color
-            or 0x5865F2,
-
         footer = {
-            text = "Zanji Market Tracker"
+            text = "zanji.app/join (v49)"
         },
 
         timestamp =
             DateTime.now():ToIsoDate(),
     }}
 }
-
-if petImageUrl
-and petImageUrl ~= "" then
-
-    payload.embeds[1].thumbnail = {
-        url = petImageUrl
-    }
-end
 
     if deal.ShouldPing == true then
 
@@ -16145,14 +16327,6 @@ function BuildSnipeWebhookPayload(listing, toolName, hideSniper)
             timestamp = DateTime.now():ToIsoDate(),
         }}
     }
-
-    ApplyPetThumbnailToEmbed(
-        payload.embeds[1],
-        ResolveWebhookBasePetName(
-            listing.PetName,
-            confirmedPetName
-        )
-    )
 
     return payload, {
         Title = title,
@@ -25405,7 +25579,7 @@ LoadAntiAltAvoidList()
 --==================================================
 Window = Library:CreateWindow({
     Title = "ZANJI",
-    Footer = "private build • made by ben",
+    Footer = "private build • made by ronzz",
     Center = true,
     AutoShow = true,
     ToggleKeybind = Enum.KeyCode.LeftAlt,
@@ -26328,15 +26502,10 @@ if Tabs.Transfer then
         TransferState.LastActionsLayoutKey =
             ""
 
-        if TransferGetRole() == "Receiver" then
-
-            if TransferIsGiftMode() then
-                TransferArmGiftReceiverWorker()
-            else
-                TransferArmReceiverWorker()
-            end
+        if TransferIsGiftMode() then
+            TransferArmGiftReceiverWorker()
         else
-            TransferRefreshStatus()
+            TransferArmReceiverWorker()
         end
 
         if type(MarkConfigDirty) == "function" then
@@ -26358,21 +26527,29 @@ if Tabs.Transfer then
 
         if TransferState.AutoConfirmAccept == true then
 
-            if TransferGetRole() == "Receiver" then
+        TransferArmGiftReceiverWorker()
 
-                if TransferIsGiftMode() then
-                    TransferArmGiftReceiverWorker()
-                else
-                    TransferArmReceiverWorker()
+        if TransferIsGiftMode() then
+
+            task.spawn(function()
+                while TransferState.AutoConfirmAccept == true
+                and TransferIsGiftMode() do
+                    if TransferState.GiftWatcherConnected ~= true
+                    and TransferState.GiftPetWatcherConnected ~= true
+                    and TransferState.GiftAcceptPromptWatcherConnected ~= true then
+                        TransferConnectGiftWorker()
+                    end
+
+                    task.wait(1)
                 end
+            end)
 
-            elseif TransferIsGiftMode() then
-                TransferState.Status =
-                    "Auto Gift Armed"
+            TransferState.Status =
+                "Auto Gift Armed"
 
                 TransferState.LastResult =
-                    "Incoming pet gifts will be accepted automatically when idle."
-            elseif TransferConnectTradeWorker() then
+                    "Incoming pet gifts will be accepted automatically."
+            elseif TransferArmReceiverWorker() then
                 TransferState.Status =
                     "Auto Trade Armed"
 
@@ -26573,15 +26750,10 @@ if Tabs.Transfer then
         end
     end)
 
-    if TransferGetRole() == "Receiver" then
-
-        if TransferIsGiftMode() then
-            TransferArmGiftReceiverWorker()
-        else
-            TransferArmReceiverWorker()
-        end
+    if TransferIsGiftMode() then
+        TransferArmGiftReceiverWorker()
     else
-        TransferRefreshStatus()
+        TransferArmReceiverWorker()
     end
 
     TransferApplyActionsLayout()
@@ -34066,6 +34238,9 @@ ListingMutationList =
         "---",
     }
 
+ListingMutationListSignature =
+    ""
+
 function AddUniqueListingMutationName(target, seen, value)
 
     local name =
@@ -34340,10 +34515,18 @@ function RefreshListingMutationList()
     ListingMutationList =
         names
 
-    print(
-        "[MUTATION LIST] Dynamic mutations loaded:",
-        tostring(#ListingMutationList)
-    )
+    local signature =
+        table.concat(ListingMutationList, "\31")
+
+    if signature ~= ListingMutationListSignature then
+        ListingMutationListSignature =
+            signature
+
+        print(
+            "[MUTATION LIST] Dynamic mutations loaded:",
+            tostring(#ListingMutationList)
+        )
+    end
 
     return ListingMutationList
 end
@@ -49094,71 +49277,6 @@ function BuildWebhookTab()
         Text = "Tests",
         MarginTop = 10,
         MarginBottom = 8,
-    })
-
-    WebhookDependencyBox:AddButton({
-
-        Text = "🧪 Test Booth Sale Webhooks",
-        Tooltip = "Queues one sample booth sale for the owner webhook and the global booth-sale webhook.",
-        Func = function()
-
-            local sampleSale = {
-                PetName = "Webhook Test Pet",
-                ToolName = "Webhook Test Pet [Age 1] [1.00 KG]",
-                Age = 1,
-                MutationText = "Normal",
-                BaseWeight = 1,
-                DisplayWeight = 1,
-                GrossPrice = 1,
-                NetPrice = 1,
-                Price = 1,
-            }
-
-            local ownerQueued =
-                false
-
-            if WebhookState.Enabled
-            and WebhookState.NotifyBoothSales
-            and type(QueueWebhook) == "function"
-            and type(CreateBoothSaleEmbed) == "function" then
-
-                ownerQueued =
-                    QueueWebhook(
-                        ApplyWebhookPing(
-                            CreateBoothSaleEmbed(sampleSale),
-                            WebhookState.PingBoothSales
-                        ),
-                        WebhookState.BoothSalesRoute
-                    ) == true
-            end
-
-            local globalQueued =
-                type(QueueGlobalBoothSaleWebhook) == "function"
-                and QueueGlobalBoothSaleWebhook(sampleSale) == true
-
-            ZanjiNotify(
-                "Booth Sale Webhook Test",
-                "Owner: "
-                    .. (
-                        ownerQueued
-                        and "queued"
-                        or "not queued"
-                    )
-                    .. " | Global: "
-                    .. (
-                        globalQueued
-                        and "queued"
-                        or "not queued"
-                    ),
-                (
-                    ownerQueued
-                    or globalQueued
-                )
-                    and "check"
-                    or "triangle-alert",
-                5
-            )
-        end,
     })
 
     WebhookDependencyBox:AddButton({
