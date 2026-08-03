@@ -5477,10 +5477,10 @@ MarketTrackerTargets = {
         -- <= GoodPrice   = ✅ Good / green
         -- <= MaxPrice    = ⚖️ Fair / yellow
         -- > MaxPrice     = ❌ Overpriced / red
-        MaxPrice = 50000,
-        GoodPrice = 30000,
-        SnipePrice = 15000,
-        PingBelow = 15000,
+        MaxPrice = 18000,
+        GoodPrice = 12000,
+        SnipePrice = 10000,
+        PingBelow = 10000,
 
         MinWeight = 0,
     },
@@ -5489,9 +5489,9 @@ MarketTrackerTargets = {
         Type = "Rare",
         Emoji = "🐘",
 
-        MaxPrice = 2000000,
-        GoodPrice = 500000,
-        SnipePrice = 250000,
+        MaxPrice = 500000,
+        GoodPrice = 250000,
+        SnipePrice = 200000,
         PingBelow = 00000,
 
         MinWeight = 0,
@@ -5501,10 +5501,10 @@ MarketTrackerTargets = {
         Type = "Rare",
         Emoji = "🐦",
 
-        MaxPrice = 50000,
-        GoodPrice = 40000,
-        SnipePrice = 30000,
-        PingBelow = 30000,
+        MaxPrice = 20000,
+        GoodPrice = 15000,
+        SnipePrice = 13000,
+        PingBelow = 13000,
 
         MinWeight = 0,
     },
@@ -5513,10 +5513,10 @@ MarketTrackerTargets = {
         Type = "Rare",
         Emoji = "🦖",
 
-        MaxPrice = 60000,
-        GoodPrice = 30000,
-        SnipePrice = 25000,
-        PingBelow = 25000,
+        MaxPrice = 20000,
+        GoodPrice = 15000,
+        SnipePrice = 13000,
+        PingBelow = 13000,
 
         MinWeight = 0,
     },
@@ -14825,7 +14825,7 @@ function BuildBoothSaleWebhookPayload(sale, hideSeller)
         or GetTokenBalance()
 
     if hideSeller then
-        seller = "Hidden"
+        seller = "Zanji Hub"
     end
 
     local payload = {
@@ -14839,7 +14839,7 @@ function BuildBoothSaleWebhookPayload(sale, hideSeller)
                 weight
             ),
             description = string.format(
-                "By User: **%s**\n\n```ansi\n💰 Sold For: %s\n✨ Token Balance: %s\n```",
+                "By User: ||%s||\n\n```ansi\n💰 Sold For: %s\n✨ Token Balance: %s\n```",
                 seller,
                 FormatBoothSaleTokenAmount(soldFor),
                 FormatBoothSaleTokenAmount(tokenBalance)
@@ -15412,19 +15412,19 @@ function ResolveMarketTrackerWeightClass(weight)
         return "Unknown"
     end
 
-    if weight < 10 then
+    if weight < 1 then
         return "Small"
-    elseif weight < 30 then
+    elseif weight < 3 then
         return "Normal"
-    elseif weight < 50 then
+    elseif weight < 5 then
         return "Semi Huge"
-    elseif weight < 70 then
+    elseif weight < 7 then
         return "Huge"
-    elseif weight < 80 then
+    elseif weight < 8 then
         return "Semi Titanic"
-    elseif weight < 90 then
+    elseif weight < 9 then
         return "Titanic"
-    elseif weight < 100 then
+    elseif weight < 10 then
         return "Godly"
     end
 
