@@ -9608,7 +9608,7 @@ end
     end
 
     if Library.IsMobile then
-        local ToggleButton = Library:AddDraggableButton("Holy", function()
+        local ToggleButton = Library:AddDraggableButton("Zanji", function()
             Library:Toggle()
         end, true)
 
