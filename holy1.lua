@@ -4553,12 +4553,11 @@ TransferState = {
     SelectedMutations = {},
 
     MinLevel = 1,
-    MaxLevel = 100,
+    MaxLevel = 2,
 
-    MinBaseWeight = 0,
-    MaxBaseWeight = 999,
+    MinBaseWeight = 0.8,
+    MaxBaseWeight = 2.86,
 
-    MaxPetsPerTrade = 12,
     AddPetDelay = 0.45,
     SendQuantity = 0,
     PlannedPetCount = 0,
@@ -4566,7 +4565,9 @@ TransferState = {
     TargetPlayerName = "",
     TargetUserId = 0,
 
-    SkipFavorites = true,
+    -- Favorites always remain eligible. When enabled, this un-favorites them
+    -- just before adding them to a trade.
+    AutoUnfavorite = false,
     AutoConfirmAccept = false,
 
     TradeOpen = false,
@@ -8667,21 +8668,34 @@ function TransferBuildPetList()
     local choices = {}
     local seen = {}
 
-    for _, petName in ipairs(source) do
+    local function AddPetName(value)
 
-        petName =
-            TransferCleanText(petName)
+        local petName =
+            TransferCleanText(value)
 
         if petName ~= ""
         and seen[petName] ~= true then
 
-            seen[petName] =
-                true
+            seen[petName] = true
 
             table.insert(
                 choices,
                 petName
             )
+        end
+    end
+
+    for _, petName in ipairs(source) do
+        AddPetName(petName)
+    end
+
+    -- The global PetList can finish loading after the Transfer tab is built.
+    -- Add currently-owned pets as an immediate fallback so the dropdown is
+    -- populated without requiring Reload Players.
+    if type(TransferBuildInventoryPets) == "function" then
+
+        for _, pet in ipairs(TransferBuildInventoryPets()) do
+            AddPetName(pet and pet.PetName)
         end
     end
 
@@ -8819,15 +8833,18 @@ function TransferResolvePetUUID(tool)
         return nil
     end
 
-    local candidates = {
-        tool:GetAttribute("PET_UUID"),
-        tool:GetAttribute("UUID"),
-        tool:GetAttribute("ItemUUID"),
-        tool:GetAttribute("ItemId"),
-        tool:GetAttribute("PetUUID"),
+    local attributeNames = {
+        "PET_UUID",
+        "UUID",
+        "ItemUUID",
+        "ItemId",
+        "PetUUID",
     }
 
-    for _, value in ipairs(candidates) do
+    for _, attributeName in ipairs(attributeNames) do
+
+        local value =
+            tool:GetAttribute(attributeName)
 
         value =
             tostring(value or "")
@@ -8844,6 +8861,68 @@ function TransferResolvePetUUID(tool)
     end
 
     return nil
+end
+
+-- The visible Tool name contains mutation prefixes (for example,
+-- "Nightmare Mimic Octopus [Age 1] ...").  The `f` attribute is the game's
+-- actual base pet name, which must be used before resolving that prefix.
+function TransferResolveBasePetName(tool, visibleName)
+
+    local attributeValue =
+        tool
+        and (
+            tool:GetAttribute("f")
+            or tool:GetAttribute("PetType")
+            or tool:GetAttribute("PetName")
+            or tool:GetAttribute("ItemName")
+        )
+
+    local attributePetName =
+        TransferCleanText(attributeValue)
+
+    if attributePetName ~= "" then
+        return attributePetName
+    end
+
+    local visible =
+        TransferCleanText(visibleName)
+
+    local lowerVisible =
+        visible:lower()
+
+    local bestMatch =
+        nil
+
+    -- Compatibility fallback for tool layouts without the `f` attribute.
+    -- Choose the longest known pet name that is the final part of the visible
+    -- name, leaving any mutation prefix in front of it.
+    for _, value in ipairs(PetList or {}) do
+
+        local candidate =
+            TransferCleanText(value)
+
+        local lowerCandidate =
+            candidate:lower()
+
+        if candidate ~= ""
+        and #lowerCandidate <= #lowerVisible
+        and lowerVisible:sub(-#lowerCandidate) == lowerCandidate
+        and (
+            #lowerCandidate == #lowerVisible
+            or lowerVisible:sub(
+                #lowerVisible - #lowerCandidate,
+                #lowerVisible - #lowerCandidate
+            ) == " "
+        )
+        and (
+            not bestMatch
+            or #candidate > #bestMatch
+        ) then
+            bestMatch = candidate
+        end
+    end
+
+    return bestMatch
 end
 
 function TransferParseInventoryPet(tool)
@@ -8868,16 +8947,44 @@ function TransferParseInventoryPet(tool)
         return nil
     end
 
+    -- Event pets can exceed the usual level range. The visible Tool label is
+    -- the live age shown by the game and can be newer than cached inventory
+    -- data or Tool attributes (which can remain at Age 1).
+    local inventoryAge =
+        type(ResolveRawPetDataAgeFromUUID) == "function"
+        and ResolveRawPetDataAgeFromUUID(uuid)
+        or nil
+
+    local visibleAge =
+        tonumber(
+            tostring(tool.Name):match(
+                "%[Age%s*(%d+)%]"
+            )
+        )
+
     local level =
-        tonumber(tool:GetAttribute("Level"))
+        visibleAge
+        or tonumber(inventoryAge)
+        or tonumber(tool:GetAttribute("Level"))
         or tonumber(tool:GetAttribute("Age"))
-        or tonumber(tostring(tool.Name):match("%[Age%s*(%d+)%]"))
+        or tonumber(tool:GetAttribute("PetLevel"))
+        or tonumber(tool:GetAttribute("PetAge"))
         or 1
 
     local baseWeight =
         tonumber(tool:GetAttribute("BaseWeight"))
         or tonumber(tool:GetAttribute("baseWeight"))
         or 0
+
+    local basePetName =
+        TransferResolveBasePetName(
+            tool,
+            parsed.PetName
+        )
+
+    if TransferCleanText(basePetName) == "" then
+        return nil
+    end
 
     local mutation =
         "---"
@@ -8886,7 +8993,7 @@ function TransferParseInventoryPet(tool)
         mutation =
             ResolveListingPetMutation(
                 tool.Name,
-                parsed.PetName
+                basePetName
             )
     end
 
@@ -8899,7 +9006,7 @@ function TransferParseInventoryPet(tool)
     return {
         Tool = tool,
         UUID = uuid,
-        PetName = TransferCleanText(parsed.PetName),
+        PetName = TransferCleanText(basePetName),
         Mutation = TransferCleanText(mutation),
         Level = math.floor(tonumber(level) or 1),
         BaseWeight = tonumber(baseWeight) or 0,
@@ -8967,26 +9074,26 @@ function TransferPetMatchesFilters(pet)
         return false
     end
 
-    if TransferState.SkipFavorites == true
-    and pet.IsFavorite == true then
-        return false
-    end
-
     local selectedMutations =
         TransferState.SelectedMutations
         or {}
 
-    if not TransferMapIsEmpty(selectedMutations) then
+    local mutation =
+        TransferCleanText(
+            pet.Mutation
+            or "---"
+        )
 
-        local mutation =
-            TransferCleanText(
-                pet.Mutation
-                or "---"
-            )
+    -- Safety default: an empty selection means normal / no-mutation pets
+    -- only. Selecting one or more mutations sends only those exact matches.
+    if TransferMapIsEmpty(selectedMutations) then
 
-        if selectedMutations[mutation] ~= true then
+        if mutation ~= "---" then
             return false
         end
+
+    elseif selectedMutations[mutation] ~= true then
+        return false
     end
 
     local level =
@@ -9018,8 +9125,8 @@ end
 
 function TransferBuildMatchingPets(limit)
 
-    -- No limit means scan the entire inventory. The transfer worker passes a
-    -- per-trade limit explicitly, while Preview Matches uses the full count.
+    -- No limit means scan the entire inventory. Trade batches are split using
+    -- the game's own item limit, so there is no user-facing batch-size cap.
     local maxMatches =
         nil
 
@@ -9028,10 +9135,10 @@ function TransferBuildMatchingPets(limit)
             math.clamp(
                 math.floor(
                     tonumber(limit)
-                    or SafeNumber(TransferState.MaxPetsPerTrade, 6)
+                    or 1
                 ),
                 1,
-                50
+                500
             )
     end
 
@@ -9061,11 +9168,35 @@ end
 
 function TransferRefreshStatus()
 
+    local eligibleCount =
+        #(TransferState.MatchedPets or {})
+
+    local quantity =
+        math.max(
+            0,
+            math.floor(
+                tonumber(TransferState.SendQuantity)
+                or 0
+            )
+        )
+
+    local quantityText =
+        quantity <= 0
+        and "All matching pets"
+        or (
+            tostring(math.min(quantity, eligibleCount))
+            .. (
+                math.min(quantity, eligibleCount) == 1
+                and " pet"
+                or " pets"
+            )
+        )
+
     if TransferState.StatusLabel
     and type(TransferState.StatusLabel.SetText) == "function" then
 
         TransferState.StatusLabel:SetText(
-            "Mode: "
+            "Transfer Status: "
                 .. tostring(TransferState.Status or "Idle")
         )
     end
@@ -9074,11 +9205,11 @@ function TransferRefreshStatus()
     and type(TransferState.TargetLabel.SetText) == "function" then
 
         TransferState.TargetLabel:SetText(
-            "Target: "
+            "Recipient: "
                 .. (
                     TransferState.TargetPlayerName ~= ""
                     and TransferState.TargetPlayerName
-                    or "None"
+                    or "Not selected"
                 )
         )
     end
@@ -9087,8 +9218,10 @@ function TransferRefreshStatus()
     and type(TransferState.MatchedLabel.SetText) == "function" then
 
         TransferState.MatchedLabel:SetText(
-            "Matched Pets: "
-                .. tostring(#(TransferState.MatchedPets or {}))
+            "Matching Pets: "
+                .. tostring(eligibleCount)
+                .. " | Quantity: "
+                .. quantityText
         )
     end
 
@@ -9096,10 +9229,10 @@ function TransferRefreshStatus()
     and type(TransferState.LastResultLabel.SetText) == "function" then
 
         TransferState.LastResultLabel:SetText(
-            "Last Result: "
-                .. tostring(TransferState.LastResult or "None")
-                .. " | Sent: "
+            "Progress: "
                 .. TransferGetProgressText()
+                .. " | "
+                .. tostring(TransferState.LastResult or "Ready")
         )
     end
 end
@@ -9130,9 +9263,7 @@ function TransferRefreshDropdowns()
         )
     end
 
-    TransferBuildMatchingPets(
-        TransferState.MaxPetsPerTrade
-    )
+    TransferBuildMatchingPets()
 
     TransferRefreshStatus()
 end
@@ -9152,9 +9283,9 @@ function TransferPreview()
 
     TransferState.LastResult =
         tostring(#matches)
-            .. " matching pet(s); "
+            .. " eligible pet(s); "
             .. tostring(planned)
-            .. " selected to send."
+            .. " ready to send."
 
     print("========== HOLY TRANSFER PREVIEW ==========")
 
@@ -10146,7 +10277,7 @@ end
 
 function TransferPrepareBatchFavorites(batch)
 
-    if TransferState.SkipFavorites == true then
+    if TransferState.AutoUnfavorite ~= true then
         return true
     end
 
@@ -10220,10 +10351,7 @@ function TransferGetTradeBatchLimit()
     end
 
     return math.clamp(
-        math.floor(
-            tonumber(TransferState.MaxPetsPerTrade)
-            or gameLimit
-        ),
+        math.floor(gameLimit),
         1,
         math.max(1, math.floor(gameLimit))
     )
@@ -13474,9 +13602,6 @@ function BuildBoothSaleWebhookPayload(sale, hideSeller)
             sale.ToolName or sale.DisplayName
         )
 
-    local nickname =
-        ResolveBoothSaleNickname(sale)
-
     local age =
         math.max(
             0,
@@ -13505,10 +13630,10 @@ function BuildBoothSaleWebhookPayload(sale, hideSeller)
 
     local soldFor =
         sale.SoldFor
+        or sale.NetPrice
+        or sale.Price
         or sale.GrossPrice
         or sale.ListedPrice
-        or sale.Price
-        or sale.NetPrice
 
     local tokenBalance =
         sale.TokenBalance
@@ -13524,9 +13649,8 @@ function BuildBoothSaleWebhookPayload(sale, hideSeller)
         embeds = {{
             color = 0xF1C40F,
             title = string.format(
-                "💰 %s(%s) [Age %d] [%.2f KG]",
+                "💰 %s [Age %d] [%.2f KG]",
                 tostring(petName or "Unknown"),
-                nickname,
                 age,
                 weight
             ),
@@ -14099,7 +14223,10 @@ function ResolveMarketTrackerWeightClass(weight)
 
     weight =
         tonumber(weight)
-        or 0
+
+    if not weight then
+        return "Unknown"
+    end
 
     if weight < 10 then
         return "Small"
@@ -14197,7 +14324,7 @@ function ResolveMarketTrackerDeal(config, price)
     }
 end
 
-function BuildMarketTrackerTitle(petName, mutationText, age, displayWeight, config)
+function BuildMarketTrackerTitle(petName, mutationText, age, displayWeight, baseWeight, config)
 
     local numericAge =
         tonumber(age)
@@ -14214,7 +14341,9 @@ function BuildMarketTrackerTitle(petName, mutationText, age, displayWeight, conf
 
     local weightClass =
         ResolveMarketTrackerWeightClass(
-            displayWeight
+            -- Semi Titanic / Titanic tiers are based on the pet's raw
+            -- BaseWeight, never its age-scaled current KG.
+            baseWeight
         )
 
     local finalName =
@@ -14360,6 +14489,7 @@ local title =
         mutationText,
         age,
         displayWeight,
+        baseWeight,
         config
     )
 
@@ -14744,6 +14874,112 @@ function ResolveMutationFromConfirmedToolName(toolName, basePetName)
 end
 
 --==================================================
+-- SNIPE WEBHOOK PAYLOAD
+-- Personal routes show the buyer; global routes use a hidden placeholder.
+-- Both use the same compact format as the booth-sale webhook.
+--==================================================
+function BuildSnipeWebhookPayload(listing, toolName, hideSniper)
+
+    listing = listing or {}
+
+    local snapshot =
+        ParseConfirmedToolSnapshot(toolName)
+
+    local confirmedPetName =
+        snapshot
+        and snapshot.CleanName
+        or tostring(listing.PetName or "Unknown")
+
+    local confirmedWeight =
+        snapshot
+        and snapshot.Weight
+        or tonumber(listing.DisplayWeight)
+        or tonumber(listing.Weight)
+
+    local confirmedAge =
+        snapshot
+        and snapshot.Age
+        or tonumber(listing.Age)
+        or 0
+
+    local mutationText =
+        ResolveMutationFromConfirmedToolName(
+            toolName,
+            listing.PetName
+        )
+
+    if mutationText == ""
+    or mutationText == "---"
+    or mutationText == "Unknown" then
+        mutationText =
+            tostring(
+                listing.MutationText
+                or listing.Mutation
+                or "Normal"
+            )
+    end
+
+    local tokenBalance =
+        tonumber(listing.SnipeTokenBalance)
+
+    if tokenBalance == nil then
+        tokenBalance = GetTokenBalance()
+        listing.SnipeTokenBalance = tokenBalance
+    end
+
+    local sniper =
+        hideSniper
+        and "Hidden"
+        or tostring(
+            Players.LocalPlayer
+            and Players.LocalPlayer.Name
+            or "Unknown"
+        )
+
+    local title =
+        string.format(
+            "🎯 Sniped: %s [Age %s] [%s]",
+            tostring(confirmedPetName),
+            tostring(confirmedAge or "Unknown"),
+            FormatWebhookWeightKG(confirmedWeight)
+        )
+
+    local payload = {
+        username = "Holy Snipe Market",
+        embeds = {{
+            color = 0xF1C40F,
+            title = title,
+            description = string.format(
+                "Sniped By: **%s**\n\n```ansi\n💸 Cost: %s\n✨ Token Balance: %s\n```",
+                sniper,
+                FormatBoothSaleTokenAmount(listing.Price),
+                FormatBoothSaleTokenAmount(tokenBalance)
+            ),
+            footer = {
+                text = "holy.app/join (v49)"
+            },
+            timestamp = DateTime.now():ToIsoDate(),
+        }}
+    }
+
+    ApplyPetThumbnailToEmbed(
+        payload.embeds[1],
+        ResolveWebhookBasePetName(
+            listing.PetName,
+            confirmedPetName
+        )
+    )
+
+    return payload, {
+        Title = title,
+        PetName = confirmedPetName,
+        Age = confirmedAge,
+        Weight = confirmedWeight,
+        MutationText = mutationText,
+    }
+end
+
+--==================================================
 -- HOLY SNIPES TARGET CHECK
 -- Uses base listing pet name so mutation prefixes do not
 -- break selected-pet routing.
@@ -14809,83 +15045,15 @@ function SendHolySnipesWebhookNow(listing, toolName, confirmedPetName, confirmed
         return false
     end
 
-    local title =
-        string.format(
-            "👑 HOLY SNIPED • %s [Age %s] [%s]",
-            tostring(confirmedPetName or listing.PetName or "Unknown"),
-            tostring(confirmedAge or "Unknown"),
-            FormatWebhookWeightKG(confirmedWeight)
+    local payload, snipeInfo =
+        BuildSnipeWebhookPayload(
+            listing,
+            toolName,
+            true
         )
 
-    mutationText =
-        tostring(mutationText or "Normal")
-
-    if mutationText == ""
-    or mutationText == "---"
-    or mutationText == "Unknown" then
-        mutationText =
-            "Normal"
-    end
-    
-    local webhookPetName =
-    ResolveWebhookBasePetName(
-        listing and listing.PetName,
-        confirmedPetName
-    )
-
-    local payload = {
-        username = "👑 HOLY",
-
-        embeds = {{
-
-            title = title,
-
-            description = "Sniped By: Holy",
-
-            color =
-                tonumber(HolySnipesWebhook.Color)
-                or 0xEAF3FF,
-
-            fields = {
-
-                {
-                    name = "💰 Bought For",
-                    value =
-                        tostring(listing.Price or 0)
-                        .. " Tokens",
-                    inline = true,
-                },
-
-                {
-                    name = "🧬 Mutation",
-                    value =
-                        mutationText,
-                    inline = true,
-                },
-
-                {
-                    name = "⚖️ BaseWeight",
-                    value =
-                        FormatWebhookBaseWeight(
-                            listing.BaseWeight
-                        ),
-                    inline = true,
-                },
-            },
-
-            footer = {
-                text = "HOLY Crown"
-            },
-
-            timestamp =
-                DateTime.now():ToIsoDate(),
-        }}
-    }
-
-    ApplyPetThumbnailToEmbed(
-    payload.embeds[1],
-    webhookPetName
-)
+    local title =
+        snipeInfo.Title
 
     local ok, response =
         pcall(function()
@@ -15022,136 +15190,27 @@ end
 
     task.spawn(function()
 
-        local snapshot =
-            ParseConfirmedToolSnapshot(toolName)
+        local payload, snipeInfo =
+            BuildSnipeWebhookPayload(
+                listing,
+                toolName,
+                true
+            )
 
-local confirmedPetName =
-    snapshot
-    and snapshot.CleanName
-    or tostring(listing.PetName or "Unknown")
+        local confirmedTitle =
+            tostring(snipeInfo.Title or "Unknown")
 
-local confirmedWeight =
-    snapshot
-    and snapshot.Weight
-    or tonumber(listing.DisplayWeight)
-    or tonumber(listing.Weight)
+        local confirmedPetName =
+            snipeInfo.PetName
 
-local confirmedAge =
-    snapshot
-    and snapshot.Age
-    or tonumber(listing.Age)
+        local confirmedAge =
+            snipeInfo.Age
 
-local mutationText =
-    ResolveMutationFromConfirmedToolName(
-        toolName,
-        listing.PetName
-    )
+        local confirmedWeight =
+            snipeInfo.Weight
 
-if mutationText == "Normal"
-or mutationText == "Unknown"
-or mutationText == "" then
-
-    mutationText =
-        tostring(
-            listing.MutationText
-            or listing.Mutation
-            or "Normal"
-        )
-end
-
-local confirmedTitle =
-    string.format(
-        "%s [Age %s] [%s]",
-        tostring(confirmedPetName),
-        tostring(confirmedAge or "Unknown"),
-        FormatWebhookWeightKG(confirmedWeight)
-    )
-
-    local webhookPetName =
-    ResolveWebhookBasePetName(
-        listing and listing.PetName,
-        confirmedPetName
-    )
-
-        local serverCopy =
-            tostring(game.PlaceId)
-            .. ":"
-            .. tostring(game.JobId)
-
-        local sellerName =
-            tostring(listing.Seller or "Unknown")
-
-        if listing.SellerUserId then
-            sellerName =
-                ResolveSeller(listing.SellerUserId)
-        end
-
-        local fields = {
-
-            {
-                name = "Price",
-                value = tostring(listing.Price),
-                inline = true,
-            },
-
-            {
-                name = "Weight",
-                value =
-                    confirmedWeight
-                    and (tostring(confirmedWeight) .. " KG")
-                    or "Unknown",
-                inline = true,
-            },
-        }
-
-        if confirmedAge then
-            table.insert(fields, {
-                name = "Age",
-                value = tostring(confirmedAge),
-                inline = true,
-            })
-        end
-
-        table.insert(fields, {
-            name = "Seller",
-            value = sellerName,
-            inline = true,
-        })
-
-        table.insert(fields, {
-            name = "Server",
-            value =
-                "```lua\n"
-                .. serverCopy
-                .. "\n```",
-            inline = false,
-        })
-
-        local payload = {
-            embeds = {{
-
-                title =
-                    string.format(
-                        "**%s**",
-                        confirmedTitle
-                    ),
-
-                color = 0x8B5CF6,
-
-                fields = fields,
-
-                footer = {
-                    text = "Holy V2 Global"
-                },
-
-                timestamp = DateTime.now():ToIsoDate(),
-            }}
-        }
-
-ApplyPetThumbnailToEmbed(
-    payload.embeds[1],
-    webhookPetName
-)
+        local mutationText =
+            snipeInfo.MutationText
 
         local ok, response =
             pcall(function()
@@ -24774,9 +24833,7 @@ if Tabs.Transfer then
         TransferState.SelectedPets =
             TransferCloneSelectedMap(value)
 
-        TransferBuildMatchingPets(
-            TransferState.MaxPetsPerTrade
-        )
+        TransferBuildMatchingPets()
 
         if TransferGetRole() == "Receiver" then
             TransferArmReceiverWorker()
@@ -24789,13 +24846,70 @@ if Tabs.Transfer then
         end
     end)
 
-    TransferPetFiltersBox:AddButton({
-        Text = "Remove All Pets",
-        Tooltip = "Clear selected transfer pets.",
+    TransferPetFiltersBox:AddInput(
+        "TransferSendQuantity",
+        {
+            Text = "Quantity",
+            Default = "0",
+            Numeric = true,
+            Finished = true,
+            ClearTextOnFocus = false,
+            Tooltip = "How many matching pets to send. 0 sends all matching pets.",
+        }
+    ):OnChanged(function(value)
+
+        TransferState.SendQuantity =
+            math.max(
+                0,
+                math.floor(
+                    tonumber(value)
+                    or 0
+                )
+            )
+
+        TransferRefreshStatus()
+
+        if type(MarkConfigDirty) == "function" then
+            MarkConfigDirty()
+        end
+    end)
+
+    local TransferPetSelectionButtons =
+        TransferPetFiltersBox:AddButton({
+        Text = "Select All",
+        Tooltip = "Select every available pet type.",
         Func = function()
 
-            TransferState.SelectedPets =
-                {}
+            local selected = {}
+
+            for _, petName in ipairs(TransferBuildPetList()) do
+                selected[petName] = true
+            end
+
+            TransferState.SelectedPets = selected
+
+            if TransferState.PetDropdownRef
+            and type(TransferState.PetDropdownRef.SetValue) == "function" then
+
+                TransferState.PetDropdownRef:SetValue(selected)
+            end
+
+            TransferBuildMatchingPets()
+
+            TransferRefreshStatus()
+
+            if type(MarkConfigDirty) == "function" then
+                MarkConfigDirty()
+            end
+        end,
+    })
+
+    TransferPetSelectionButtons:AddButton({
+        Text = "Remove All",
+        Tooltip = "Clear all selected pet types.",
+        Func = function()
+
+            TransferState.SelectedPets = {}
 
             if TransferState.PetDropdownRef
             and type(TransferState.PetDropdownRef.SetValue) == "function" then
@@ -24803,14 +24917,16 @@ if Tabs.Transfer then
                 TransferState.PetDropdownRef:SetValue({})
             end
 
-            TransferBuildMatchingPets(
-                TransferState.MaxPetsPerTrade
-            )
+            TransferBuildMatchingPets()
 
             if TransferGetRole() == "Receiver" then
                 TransferArmReceiverWorker()
             else
                 TransferRefreshStatus()
+            end
+
+            if type(MarkConfigDirty) == "function" then
+                MarkConfigDirty()
             end
         end,
     })
@@ -24820,7 +24936,7 @@ if Tabs.Transfer then
             "TransferMutationSelect",
             {
                 Text = "Mutations",
-                Tooltip = "Dynamic mutation list from Listings. Empty = any mutation.",
+                Tooltip = "Dynamic mutation list from Listings. Empty = normal pets only; select mutations to send only those mutations.",
                 Values = TransferBuildMutationOnlyList(),
                 Default = {},
                 Searchable = true,
@@ -24836,9 +24952,7 @@ if Tabs.Transfer then
         TransferState.SelectedMutations =
             TransferCloneSelectedMap(value)
 
-        TransferBuildMatchingPets(
-            TransferState.MaxPetsPerTrade
-        )
+        TransferBuildMatchingPets()
 
         TransferRefreshStatus()
 
@@ -24867,9 +24981,7 @@ if Tabs.Transfer then
                 )
             )
 
-        TransferBuildMatchingPets(
-            TransferState.MaxPetsPerTrade
-        )
+        TransferBuildMatchingPets()
 
         TransferRefreshStatus()
     end)
@@ -24878,7 +24990,7 @@ if Tabs.Transfer then
         "TransferMaxLevel",
         {
             Text = "Max Level",
-            Default = "100",
+            Default = "2",
             Numeric = true,
             Finished = true,
             ClearTextOnFocus = false,
@@ -24890,13 +25002,11 @@ if Tabs.Transfer then
                 TransferState.MinLevel or 1,
                 math.floor(
                     tonumber(value)
-                    or 100
+                    or 2
                 )
             )
 
-        TransferBuildMatchingPets(
-            TransferState.MaxPetsPerTrade
-        )
+        TransferBuildMatchingPets()
 
         TransferRefreshStatus()
     end)
@@ -24905,7 +25015,7 @@ if Tabs.Transfer then
         "TransferMinBaseWeight",
         {
             Text = "Min BaseWeight",
-            Default = "0",
+            Default = "0.8",
             Numeric = true,
             Finished = true,
             ClearTextOnFocus = false,
@@ -24916,12 +25026,10 @@ if Tabs.Transfer then
             math.max(
                 0,
                 tonumber(value)
-                or 0
+                or 0.8
             )
 
-        TransferBuildMatchingPets(
-            TransferState.MaxPetsPerTrade
-        )
+        TransferBuildMatchingPets()
 
         TransferRefreshStatus()
     end)
@@ -24930,7 +25038,7 @@ if Tabs.Transfer then
         "TransferMaxBaseWeight",
         {
             Text = "Max BaseWeight",
-            Default = "999",
+            Default = "2.86",
             Numeric = true,
             Finished = true,
             ClearTextOnFocus = false,
@@ -24941,12 +25049,10 @@ if Tabs.Transfer then
             math.max(
                 0,
                 tonumber(value)
-                or 999
+                or 2.86
             )
 
-        TransferBuildMatchingPets(
-            TransferState.MaxPetsPerTrade
-        )
+        TransferBuildMatchingPets()
 
         TransferRefreshStatus()
     end)
@@ -24964,81 +25070,6 @@ if Tabs.Transfer then
             value == true
 
         TransferRefreshStatus()
-    end)
-
-    TransferSafetyBox:AddToggle(
-        "TransferSkipFavorites",
-        {
-            Text = "Skip Favorites",
-            Tooltip = "ON excludes favorited pets. OFF unfavorites selected matching pets before each trade.",
-            Default = true,
-        }
-    ):OnChanged(function(value)
-
-        TransferState.SkipFavorites =
-            value == true
-
-        TransferBuildMatchingPets(
-            TransferState.MaxPetsPerTrade
-        )
-
-        TransferRefreshStatus()
-    end)
-
-    TransferSafetyBox:AddInput(
-        "TransferMaxPetsPerTrade",
-        {
-            Text = "Max Pets Per Trade",
-            Default = "12",
-            Numeric = true,
-            Finished = true,
-            ClearTextOnFocus = false,
-        }
-    ):OnChanged(function(value)
-
-        TransferState.MaxPetsPerTrade =
-            math.clamp(
-                math.floor(
-                    tonumber(value)
-                    or 12
-                ),
-                1,
-                50
-            )
-
-        TransferBuildMatchingPets(
-            TransferState.MaxPetsPerTrade
-        )
-
-        TransferRefreshStatus()
-    end)
-
-    TransferSafetyBox:AddInput(
-        "TransferSendQuantity",
-        {
-            Text = "Pets To Send",
-            Default = "0",
-            Numeric = true,
-            Finished = true,
-            ClearTextOnFocus = false,
-            Tooltip = "Total matching pets to transfer. 0 = all matching pets.",
-        }
-    ):OnChanged(function(value)
-
-        TransferState.SendQuantity =
-            math.max(
-                0,
-                math.floor(
-                    tonumber(value)
-                    or 0
-                )
-            )
-
-        TransferRefreshStatus()
-
-        if type(MarkConfigDirty) == "function" then
-            MarkConfigDirty()
-        end
     end)
 
     local TransferTargetDropdown =
@@ -25121,6 +25152,25 @@ if Tabs.Transfer then
         end
     end)
 
+    TransferActionsBox:AddToggle(
+        "TransferAutoUnfavorite",
+        {
+            Text = "❤️ Auto Unfavorite",
+            Tooltip = "ON removes Favorite from matching pets immediately before they are offered. OFF leaves favorites unchanged.",
+            Default = TransferState.AutoUnfavorite == true,
+        }
+    ):OnChanged(function(value)
+
+        TransferState.AutoUnfavorite =
+            value == true
+
+        TransferRefreshStatus()
+
+        if type(MarkConfigDirty) == "function" then
+            MarkConfigDirty()
+        end
+    end)
+
     TransferActionsBox:AddButton({
         Text = "🔍 Preview Matches",
         Tooltip = "Print matching owned pets to console.",
@@ -25170,42 +25220,72 @@ if Tabs.Transfer then
     })
 
     TransferStatusBox:AddLabel(
-        "Dynamic sources:",
+        "Trade Summary",
         false
     )
 
     TransferStatusBox:AddLabel(
-        "Pets: PetList • Mutations: ListingMutationList",
+        "Choose pet types, then preview the eligible pets before sending.",
         true
     )
 
     TransferState.StatusLabel =
         TransferStatusBox:AddLabel(
-            "Mode: Idle",
+            "Transfer Status: Ready",
             true
         )
 
     TransferState.TargetLabel =
         TransferStatusBox:AddLabel(
-            "Target: None",
+            "Recipient: Not selected",
             true
         )
 
     TransferState.MatchedLabel =
         TransferStatusBox:AddLabel(
-            "Matched Pets: 0",
+            "Matching Pets: 0 | Quantity: All matching pets",
             true
         )
 
     TransferState.LastResultLabel =
         TransferStatusBox:AddLabel(
-            "Last Result: None | Sent: 0",
+            "Progress: 0 | Ready to preview",
             true
         )
 
-    TransferBuildMatchingPets(
-        TransferState.MaxPetsPerTrade
-    )
+    TransferBuildMatchingPets()
+
+    -- The game list/inventory can populate after the UI is drawn. Keep the
+    -- dropdown synchronized for this script session; Reload Players is only
+    -- needed for the recipient list.
+    task.spawn(function()
+        local lastChoiceSignature =
+            ""
+
+        while IsCurrentRun() do
+
+            local petChoices =
+                TransferBuildPetList()
+
+            local choiceSignature =
+                table.concat(petChoices, "\31")
+
+            if choiceSignature ~= lastChoiceSignature then
+
+                if TransferState.PetDropdownRef
+                and type(TransferState.PetDropdownRef.SetValues) == "function" then
+                    TransferState.PetDropdownRef:SetValues(
+                        petChoices
+                    )
+                end
+
+                lastChoiceSignature =
+                    choiceSignature
+            end
+
+            task.wait(0.5)
+        end
+    end)
 
     if TransferGetRole() == "Receiver" then
         TransferArmReceiverWorker()
@@ -43612,138 +43692,11 @@ end)
 
 CreateSuccessEmbed = function(listing, toolName, source)
 
-    listing =
-        listing or {}
-
-    local sellerName =
-        tostring(listing.Seller or "Unknown")
-
-    if listing.SellerUserId then
-        sellerName =
-            ResolveSeller(listing.SellerUserId)
-    end
-
-    local snapshot =
-        ParseConfirmedToolSnapshot(toolName)
-
-    local confirmedPetName =
-        snapshot
-        and snapshot.CleanName
-        or tostring(listing.PetName or "Unknown")
-
-    local confirmedWeight =
-        snapshot
-        and snapshot.Weight
-        or tonumber(listing.DisplayWeight)
-        or tonumber(listing.Weight)
-
-    local confirmedAge =
-        snapshot
-        and snapshot.Age
-        or tonumber(listing.Age)
-        or "Unknown"
-
-    local mutationText =
-        ResolveMutationFromConfirmedToolName(
-            toolName,
-            listing.PetName
-        )
-
-    if mutationText == "Normal"
-    or mutationText == "Unknown"
-    or mutationText == "" then
-
-        mutationText =
-            tostring(
-                listing.MutationText
-                or listing.Mutation
-                or "Normal"
-            )
-    end
-
-local title =
-    string.format(
-        "⚡ SNIPED • %s [Age %s] [%s]",
-        tostring(confirmedPetName),
-        tostring(confirmedAge or "Unknown"),
-        FormatWebhookWeightKG(confirmedWeight)
+    return BuildSnipeWebhookPayload(
+        listing,
+        toolName,
+        false
     )
-
-    return {
-        embeds = {{
-
-            title = title,
-
-            description =
-                "Sniped By: ||"
-                .. tostring(Players.LocalPlayer.Name)
-                .. "||",
-
-            color = 0xFF4FD8,
-
-            fields = {
-
-
-                {
-                    name = "💰 Bought For",
-                    value =
-                    tostring(listing.Price or 0)
-                    .. " Tokens",
-                    inline = true,
-                },
-
-                {
-                    name = "🧬 Mutation",
-                    value =
-                        tostring(mutationText or "Unknown"),
-                    inline = true,
-                },
-
-                {
-                    name = "⚖️ BaseWeight",
-                    value =
-                        FormatWebhookBaseWeight(
-                            listing.BaseWeight
-                        ),
-                    inline = true,
-                },
-
-                {
-                    name = "👤 Seller",
-                    value =
-                        tostring(sellerName),
-                    inline = true,
-                },
-
-                {
-    name = "🎒 Pet Inventory",
-    value =
-        type(FormatPersonalWebhookPetInventoryText) == "function"
-        and FormatPersonalWebhookPetInventoryText()
-        or "Unavailable",
-    inline = true,
-},
-
-                {
-                    name = "🌍 Server",
-                    value =
-                        "```lua\n"
-                        .. tostring(game.PlaceId)
-                        .. ":"
-                        .. tostring(game.JobId)
-                        .. "\n```",
-                    inline = false,
-                },
-            },
-
-            footer = {
-                text = "Holy V2"
-            },
-
-            timestamp =
-                DateTime.now():ToIsoDate(),
-        }}
-    }
 end
 
 CreateBoothSaleEmbed = function(sale)
@@ -44172,7 +44125,8 @@ snapshot[listingKey] = {
 
     -- Gross listing price shown in the booth input.
     GrossPrice = grossPrice,
-    SoldFor = grossPrice,
+    -- The seller receives the post-fee payout, not the listed price.
+    SoldFor = netPrice,
 
     -- Net tokens actually received after booth tax.
     NetPrice = netPrice,
@@ -44224,10 +44178,10 @@ function FireConfirmedBoothSale(oldListing, tokenBalance)
         or "Unknown"
 
     oldListing.SoldFor =
-        tonumber(oldListing.GrossPrice)
+        tonumber(oldListing.NetPrice)
         or tonumber(oldListing.SoldFor)
         or tonumber(oldListing.Price)
-        or tonumber(oldListing.NetPrice)
+        or tonumber(oldListing.GrossPrice)
         or 0
 
     oldListing.TokenBalance =
