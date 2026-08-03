@@ -5650,7 +5650,7 @@ function ResolveDisplayWeightFromBaseAge(baseWeight, age)
         math.clamp(
             age,
             0,
-            125
+            500
         )
 
     -- Grow a Garden calculator formula:
@@ -15044,7 +15044,7 @@ function BuildBoothSaleWebhookPayload(sale, hideSeller)
                 weight
             ),
             description = string.format(
-                "By User: **%s**\n\n```ansi\n💰 Sold For: %s\n✨ Token Balance: %s\n```",
+                "By User: **%s**\n```ansi\n💰 Sold For: %s\n✨ Token Balance: %s\n```",
                 seller,
                 FormatBoothSaleTokenAmount(soldFor),
                 FormatBoothSaleTokenAmount(tokenBalance)
