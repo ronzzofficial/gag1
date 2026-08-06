@@ -4169,10 +4169,10 @@ SniperMonitorState = {
 --==================================================
 
 SERVER_BLOCK_SAVE_FOLDER =
-    "ZanjiV2"
+    "ZanjiHub"
 
 SERVER_BLOCK_SAVE_FILE =
-    "ZanjiV2/ServerBlockMemory.json"
+    "ZanjiHub/ServerBlockMemory.json"
 
 ServerBlockState = {
     Loaded = false,
@@ -6671,10 +6671,10 @@ end
 --==================================================
 
 SHOWCASE_SAVE_FOLDER =
-    "ZanjiV2"
+    "ZanjiHub"
 
 SHOWCASE_SAVE_FILE =
-    "ZanjiV2/ShowcasePets.json"
+    "ZanjiHub/ShowcasePets.json"
 
 function CanUseShowcaseFileIO()
 
@@ -15030,7 +15030,7 @@ function BuildBoothSaleWebhookPayload(sale, hideSeller)
         or GetTokenBalance()
 
     if hideSeller then
-        seller = "Hidden"
+        seller = "Zanji Hub"
     end
 
     local payload = {
@@ -16241,7 +16241,7 @@ end
 
 --==================================================
 -- SNIPE WEBHOOK PAYLOAD
--- Personal routes show the buyer; global routes use a hidden placeholder.
+-- Personal routes show the buyer; global routes use a  placeholder.
 -- Both use the same compact format as the booth-sale webhook.
 --==================================================
 function BuildSnipeWebhookPayload(listing, toolName, hideSniper)
@@ -16316,7 +16316,7 @@ function BuildSnipeWebhookPayload(listing, toolName, hideSniper)
             color = 0xF1C40F,
             title = title,
             description = string.format(
-                "Sniped By: **%s**\n\n```ansi\n💸 Cost: %s\n✨ Token Balance: %s\n```",
+                "Sniped By: ||%s||\n\n```ansi\n💸 Cost: %s\n✨ Token Balance: %s\n```",
                 sniper,
                 FormatBoothSaleTokenAmount(listing.Price),
                 FormatBoothSaleTokenAmount(tokenBalance)
@@ -19132,8 +19132,8 @@ function SaveTargetPetsHopConfig()
         pcall(function()
 
             if makefolder
-            and not isfolder("ZanjiV2") then
-                makefolder("ZanjiV2")
+            and not isfolder("ZanjiHub") then
+                makefolder("ZanjiHub")
             end
 
             local payload = {
@@ -20178,8 +20178,8 @@ function SaveAntiAltAvoidList()
         pcall(function()
 
             if makefolder
-            and not isfolder("ZanjiV2") then
-                makefolder("ZanjiV2")
+            and not isfolder("ZanjiHub") then
+                makefolder("ZanjiHub")
             end
 
             local users =
@@ -20225,7 +20225,7 @@ function SaveAntiAltAvoidList()
 
             writefile(
                 ANTI_ALT_AVOID_LIST_SAVE_FILE
-                    or "ZanjiV2/anti_alt_users.json",
+                    or "ZanjiHub/anti_alt_users.json",
                 HttpService:JSONEncode(payload)
             )
         end)
@@ -20258,7 +20258,7 @@ function LoadAntiAltAvoidList()
 
     local filePath =
         ANTI_ALT_AVOID_LIST_SAVE_FILE
-        or "ZanjiV2/anti_alt_users.json"
+        or "ZanjiHub/anti_alt_users.json"
 
     if not isfile(filePath) then
         print("[AntiAlt] No saved avoid list")
@@ -24120,10 +24120,10 @@ WorldState = {
 --==================================================
 
 WORLD_STATE_SAVE_FOLDER =
-    "ZanjiV2"
+    "ZanjiHub"
 
 WORLD_STATE_SAVE_FILE =
-    "ZanjiV2/WorldState.json"
+    "ZanjiHub/WorldState.json"
 
 function CanUseWorldStateFileIO()
 
@@ -24965,19 +24965,19 @@ function IsTradeWorld()
     return game.PlaceId == TRADING_WORLD_PLACE_ID
 end
 
-FILTER_SAVE_FILE = "ZanjiV2/sniper_filters.json"
+FILTER_SAVE_FILE = "ZanjiHub/sniper_filters.json"
 
 LISTING_FILTER_SAVE_FILE =
-    "ZanjiV2/listing_filters.json"
+    "ZanjiHub/listing_filters.json"
 
 LISTING_AUTOLIST_INTENT_SAVE_FILE =
-    "ZanjiV2/listing_autolist_intent.json"
+    "ZanjiHub/listing_autolist_intent.json"
 
 ANTI_ALT_AVOID_LIST_SAVE_FILE =
-    "ZanjiV2/anti_alt_users.json"
+    "ZanjiHub/anti_alt_users.json"
 
 TARGET_PETS_HOP_SAVE_FILE =
-    "ZanjiV2/target_pets_hop.json"
+    "ZanjiHub/target_pets_hop.json"
 
 --==================================================
 -- FILTER PERSISTENCE
@@ -25308,8 +25308,8 @@ function SaveListingFilters()
         pcall(function()
 
             if makefolder
-            and not isfolder("ZanjiV2") then
-                makefolder("ZanjiV2")
+            and not isfolder("ZanjiHub") then
+                makefolder("ZanjiHub")
             end
 
             local payload = {
@@ -25509,8 +25509,8 @@ function SaveListingAutoListIntent(enabled)
         pcall(function()
 
             if makefolder
-            and not isfolder("ZanjiV2") then
-                makefolder("ZanjiV2")
+            and not isfolder("ZanjiHub") then
+                makefolder("ZanjiHub")
             end
 
             local payload = {
@@ -26000,7 +26000,7 @@ function ApplyZanjiWorldTabVisibility(reason)
         "[TAB VISIBILITY]",
         inTradeWorld
             and "Trade World tabs visible"
-            or "Garden mode: Trade World tabs hidden",
+            or "Garden mode: Trade World tabs ",
         "|",
         tostring(reason or "apply")
     )
@@ -34608,7 +34608,7 @@ ListingMutationList =
 -- LISTINGS: OPTIMIZED RAW PETDATA RESOLVERS
 -- BaseWeight = age-1/base/raw size.
 -- Level/Age = current visible pet age.
--- No hidden caps. Filters control all limits.
+-- No  caps. Filters control all limits.
 --==================================================
 
 function ResolveListingRawBaseWeight(petData, itemData)
@@ -37757,7 +37757,7 @@ function ListingPetMatchesFilter(pet, filter)
     --==================================================
     -- LEVEL / AGE
     -- Fully controlled by filter.
-    -- No hidden age cap.
+    -- No  age cap.
     --==================================================
 
     local petLevel =
@@ -37796,7 +37796,7 @@ function ListingPetMatchesFilter(pet, filter)
     --==================================================
     -- BASEWEIGHT
     -- Fully controlled by filter.
-    -- No hidden BaseWeight cap.
+    -- No  BaseWeight cap.
     --==================================================
 
     local baseWeight =
@@ -43620,7 +43620,7 @@ RefreshWatchlistHUD = function()
             54
         )
 
-    local hiddenCount =
+    local Count =
         0
 
     local function BuildEntries(watchlistId)
@@ -43689,7 +43689,7 @@ RefreshWatchlistHUD = function()
         end
 
         if visibleRows >= maxRows then
-            hiddenCount = hiddenCount + #entries
+            Count = Count + #entries
             return
         end
 
@@ -43707,7 +43707,7 @@ RefreshWatchlistHUD = function()
         for _, entry in ipairs(entries) do
 
             if visibleRows >= maxRows then
-                hiddenCount = hiddenCount + 1
+                Count = hiddenCount + 1
                 continue
             end
 
@@ -50969,8 +50969,8 @@ function InitializeSaveAndConfig()
 SaveManager:SetLibrary(Library)
 ThemeManager:SetLibrary(Library)
 
-SaveManager:SetFolder("ZanjiV2")
-ThemeManager:SetFolder("ZanjiV2")
+SaveManager:SetFolder("ZanjiHub")
+ThemeManager:SetFolder("ZanjiHub")
 
 ThemeManager:ApplyTheme("Dark")
 
