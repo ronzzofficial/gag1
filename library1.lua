@@ -1052,10 +1052,39 @@ type IconModule = {
 }
 
 local FetchIcons, Icons = pcall(function()
-    return (loadstring(
-        game:HttpGet("https://raw.githubusercontent.com/deividcomsono/lucide-roblox-direct/refs/heads/main/source.lua")
-    ) :: () -> IconModule)()
+    local url = "https://raw.githubusercontent.com/deividcomsono/lucide-roblox-direct/refs/heads/main/source.lua"
+
+    local source = game:HttpGet(url)
+
+    if type(source) ~= "string" or #source < 100 then
+        error("Lucide source is empty or invalid")
+    end
+
+    local fn, err = loadstring(source)
+
+    if not fn then
+        error("Lucide compile failed: " .. tostring(err))
+    end
+
+    local result = fn()
+
+    if type(result) ~= "table" then
+        error("Lucide module returned: " .. typeof(result))
+    end
+
+    if type(result.GetAsset) ~= "function" then
+        error("Lucide module has no GetAsset function")
+    end
+
+    return result
 end)
+
+print(
+    "[ICONS]",
+    "FetchIcons =", FetchIcons,
+    "Icons =", type(Icons),
+    Icons and "GetAsset = " .. tostring(type(Icons.GetAsset)) or ""
+)
 
 function Library:GetIcon(IconName: string)
     if not FetchIcons then
