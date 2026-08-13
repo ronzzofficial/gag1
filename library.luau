@@ -1052,7 +1052,7 @@ type IconModule = {
 }
 
 local FetchIcons, Icons = pcall(function()
-    local url = "https://raw.githubusercontent.com/deividcomsono/lucide-roblox-direct/refs/heads/main/source.lua"
+    local url = "https://raw.githubusercontent.com/deividcomsono/lucide-roblox-direct/main/source.lua"
 
     local source = game:HttpGet(url)
 
