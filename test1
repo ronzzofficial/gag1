@@ -7,12 +7,15 @@ if tostring(Game_ID) ~= "7436755782" then
     return
 end
 
-if _G.is_running_gag then
-    warn("Already running x")
-    return
+-- leftover from a failed first execute (flag was set before UI loaded)
+if _G.is_running_gag and not _G.zanjihub_ui_ready then
+    _G.is_running_gag = false
 end
 
-_G.is_running_gag = true
+if _G.is_running_gag or _G.is_running_zanjihub then
+    warn("[ZanjiHub] Already running")
+    return
+end
 
 print("zanji start > ")
 
@@ -175,17 +178,46 @@ print("Loading m6")
 _S.WEBHOOK_URL = ""
 
 
--- [SETUP UI]
---local Library = getgenv().Library
+-- [SETUP UI] Obsidian (same lib jayhub uses). Load it if the executor did not inject Library.
+if not Library then
+    Library = (getgenv and getgenv().Library) or _G.Library
+end
+
+if not Library then
+    local function tryLoad(url)
+        local ok, result = pcall(function()
+            return loadstring(game:HttpGet(url))()
+        end)
+        if ok and result then
+            return result
+        end
+        return nil
+    end
+
+    Library = tryLoad("https://raw.githubusercontent.com/deividcomsono/Obsidian/main/Library.lua")
+        or tryLoad("https://cdn.jsdelivr.net/gh/deividcomsono/Obsidian@main/Library.lua")
+end
+
 if Library then
-    Library:SetWatermarkVisibility(false)
-    Library:SetWatermark("0:0:00")
+    if getgenv then
+        getgenv().Library = Library
+    end
+    _G.Library = Library
+    pcall(function()
+        Library:SetWatermarkVisibility(false)
+        Library:SetWatermark("0:0:00")
+    end)
 end
 
 if not Library then
     print("Ui Lib failed to load. Stopping")
+    warn("[ZanjiHub] Could not download Obsidian UI. Check executor HttpGet, then execute again.")
     return
 end
+
+_G.is_running_gag = true
+_G.is_running_zanjihub = true
+_G.zanjihub_ui_ready = true
 
 -- #start
 _S.AppName = "Zanji Hub"
@@ -210,13 +242,19 @@ if isfile("780ad941-1694-4f37-8e81-2fd6cde9785b.d") then
 end
 
 Varz.allowpro = {
-    ["T3rabyteX"] = true,
+    ["HexaFlame99"] = true,
+    ["topguy713"] = true,
+    ["tinybloxi33"] = true,
+    ["rizzyt9"] = true,
+    ["goforit887"] = true,
+    ["MrRizzy90"] = true,
+    ["TurboSpade67"] = true,
 }
 
 -- #trade
 Varz.AllTradeWorld = function()
     local wlist = {
-        ["T3rabyteX"] = true
+        ["BlazeTopUpPet5"] = true
     }
     if Varz.allowpro[_S.LocalPlayer.Name] or wlist[_S.LocalPlayer.Name] then
         return true
