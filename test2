@@ -9916,21 +9916,18 @@ end
 
 
 local function GetMaxPetCapacity()
-    -- Get the UI element that displays the pet count
-    local titleLabel = _S.Players.LocalPlayer.PlayerGui.ActivePetUI.Frame.Main.Holder.Header.Title
-    if not titleLabel then
+    local ok, titleLabel = pcall(function()
+        return _S.Players.LocalPlayer.PlayerGui.ActivePetUI.Frame.Main.Holder.Header.Title
+    end)
+    if not ok or not titleLabel then
         return 8
     end
-    -- Get the text from the label (example "Active Pets: 0/8")
     local fullText = titleLabel.Text
-    local maxPetsString = string.match(fullText, "/(%d+)")
-    -- If a match was found, convert the captured string to a number and return it
+    local maxPetsString = string.match(fullText or "", "/(%d+)")
     if maxPetsString then
-        return tonumber(maxPetsString)
+        return tonumber(maxPetsString) or 8
     end
-    -- If no match was found, print a warning and return nil
-    warn("Could not find the maximum pet count in the text: " .. fullText)
-    return 8 -- default
+    return 8
 end
 
 
@@ -27259,6 +27256,8 @@ end
 
 
 
+Varz.is_pro = true
+
 local Window = Library:CreateWindow({
     Title = Varz.GetTextUserHubPower(),
     Footer = _Helper.GetFooterInfo(),
@@ -27266,9 +27265,20 @@ local Window = Library:CreateWindow({
     Center = true,
     AutoShow = true
 })
--- Now, add this line to make the background block clicks
-if Library.ScreenGui.Main.Active then
-    Library.ScreenGui.Main.Active = true
+pcall(function()
+    if Library.ScreenGui and Library.ScreenGui:FindFirstChild("Main") then
+        Library.ScreenGui.Main.Active = true
+    end
+end)
+
+local function SafeBuildUi(name, fn)
+    local ok, err = pcall(fn)
+    if not ok then
+        warn("[ZanjiHub] Failed to build tab:", name, err)
+        pcall(function()
+            Library:Notify("UI error in " .. tostring(name) .. " (other tabs still loaded)", 6)
+        end)
+    end
 end
 
 -- #homeui
@@ -27282,9 +27292,9 @@ local function HomeDashboardUi()
     })
 
     -- Add a groupbox to the left side
-    local GroupAutoFarm = MainTab:AddLeftGroupbox("Auto Hatch", "calendar-sync", false)
-    local gpSystem = MainTab:AddRightGroupbox("System", "monitor-cog", false)
-    local GroupFarmDetails = MainTab:AddRightGroupbox("Farm Details", "tent-tree", false)
+    local GroupAutoFarm = MainTab:AddLeftGroupbox("Auto Hatch", "calendar-sync")
+    local gpSystem = MainTab:AddRightGroupbox("System", "monitor-cog")
+    local GroupFarmDetails = MainTab:AddRightGroupbox("Farm Details", "tent-tree")
 
     --=====================================
     -- Pause All Systems
@@ -27431,7 +27441,7 @@ local function HomeDashboardUi()
     --     end,
     -- })
 end
-HomeDashboardUi();
+SafeBuildUi("Home", HomeDashboardUi)
 
 -- END of HomeDashboardUi
 
@@ -27521,7 +27531,7 @@ Varz.ProUi = function()
         })
 
         local GetText_CustomTeams1Text = function(team_data, num)
-            local current_selected = #team_data
+            local current_selected = #(team_data or {})
             local max_allowed = GetMaxPetCapacity()
 
             local ratio_colour = current_selected >= max_allowed and "#FF5555" or "#00FF99"
@@ -30661,8 +30671,8 @@ Varz.ProUi = function()
     end
 end
 
-Varz.ProUi()
-Varz.UpdateDropDownPlayersGiftPets()
+SafeBuildUi("Premium", Varz.ProUi)
+pcall(Varz.UpdateDropDownPlayersGiftPets)
 
 --- END pro ui
 
@@ -32314,7 +32324,7 @@ Varz.PetTeamsUi = function()
 end
 
 -- call it
-Varz.PetTeamsUi()
+SafeBuildUi("Hatching Teams", Varz.PetTeamsUi)
 
 
 
@@ -32449,7 +32459,7 @@ end
 
 
 -- Call the new function to create the UI
-MEggUi()
+SafeBuildUi("Eggs Priority", MEggUi)
 
 
 
@@ -32662,7 +32672,7 @@ end
 -- ===========================================================================================
 -- End of Sell Settings UI
 -- ===========================================================================================
-PetSellSettingsUi()
+SafeBuildUi("Pet Sell Settings", PetSellSettingsUi)
 
 
 
@@ -33966,7 +33976,7 @@ local function M_UI_PLANTS()
 end
 
 -- Call the function to build the UI
-M_UI_PLANTS()
+SafeBuildUi("Sell Plants", M_UI_PLANTS)
 
 
 
@@ -35365,8 +35375,10 @@ local function MEventsUi()
 end
 
 -- Call the function to build the UI
-MEventsUi()
-PetMutation.mut_ui.UpdateTeamsDropdowns()
+SafeBuildUi("Events", MEventsUi)
+pcall(function()
+    PetMutation.mut_ui.UpdateTeamsDropdowns()
+end)
 
 
 -- Create the Pet System ui
@@ -36046,7 +36058,7 @@ local function UiPetsSideTab()
 end
 
 -- Call the function to build the UI
-UiPetsSideTab()
+SafeBuildUi("Pets", UiPetsSideTab)
 
 
 
@@ -36595,7 +36607,7 @@ local function UiCraftsideTab()
 end
 
 -- Call the function to build the UI
-UiCraftsideTab()
+SafeBuildUi("Craft", UiCraftsideTab)
 
 
 
@@ -36958,7 +36970,7 @@ local function UiCollectionTab()
 end
 
 -- Call the function to build the UI
-UiCollectionTab()
+SafeBuildUi("Collection", UiCollectionTab)
 
 
 
@@ -37611,7 +37623,7 @@ function MShopUi()
     --========================================================
 end
 
-MShopUi();
+SafeBuildUi("Shop", MShopUi)
 
 -- #dex
 _Helper.is_dex_loaded = false
@@ -38053,7 +38065,7 @@ function SettingsUi()
     --     })
 end
 
-SettingsUi()
+SafeBuildUi("Settings", SettingsUi)
 
 -- must be called last
 --Library:SetDPIScale(FSettings.ui_rescale_val)
