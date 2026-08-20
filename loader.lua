@@ -1,1109 +1,1436 @@
 --==================================================
--- ZANJI LOADER
--- Server-auth key gate runs before ZanjiV3.lua is fetched/executed.
--- Supports:
--- - Backend key verification
--- - 10-account key plans
--- - Saved key autoload
--- - Feature flags
--- - Usage tracker heartbeat
+-- ZANJI PUBLIC LOADER
+-- Put this file in your public GitHub repository.
+-- The actual ZANJI source is never stored in this file.
 --==================================================
 
-local HttpService =
-    game:GetService("HttpService")
-
-local Players =
-    game:GetService("Players")
-
-if not game:IsLoaded() then
-    game.Loaded:Wait()
-end
+local Players = game:GetService("Players")
+local HttpService = game:GetService("HttpService")
+local CoreGui = game:GetService("CoreGui")
 
 local LocalPlayer =
     Players.LocalPlayer
     or Players.PlayerAdded:Wait()
 
 --==================================================
--- MAIN SCRIPT URL
+-- LEGACY ALLOWED PLACE IDS
 --==================================================
 
-local MAIN_URL =
-    "https://raw.githubusercontent.com/ronzzofficial/gag1/refs/heads/main/ui.lua?v="
-    .. tostring(os.time())
+local LEGACY_ALLOWED_PLACE_IDS = {
+    [126884695634066] =
+        true,
 
---==================================================
--- LOADER AUTH CONFIG
---==================================================
-
-local ZANJI_LOADER_KEY_STATE = {
-    Enabled = true,
-
-    SaveFile = "Zanji/zanji_access_key.txt",
-
-    -- Paste your NEW auth Google Apps Script Web App URL here.
-    -- This is NOT the usage tracker URL.
-    AuthURL = "https://script.google.com/macros/s/AKfycbzn7MwnnbJAakW0HjJ6PE89Ue_jw9F2CDyoqI1xgKuw9ycV-hGNksxtzOAU9Q8Zf8JKTQ/exec",  -- Must match the secret inside your auth Apps Script.
-    Secret = "zanjilangmalakas",
-
-    Accepted = false,
-    Owner = "Unknown",
-    CurrentKey = "",
-
-    LastAuth = nil,
+    [129954712878723] =
+        true,
 }
 
 --==================================================
--- SMALL HELPERS
+-- ENVIRONMENT
 --==================================================
 
-local function NormalizeZanjiAccessKey(value)
+local function GetEnvironment()
+    if type(getgenv) == "function" then
+        local ok, env = pcall(getgenv)
 
+        if ok and type(env) == "table" then
+            return env
+        end
+    end
+
+    return _G
+end
+
+local Environment = GetEnvironment()
+
+--==================================================
+-- EXECUTE ONCE PER JOB
+--==================================================
+
+local existingLoaderRuntime =
+    Environment.ZANJI_LOADER_RUNTIME
+
+if type(existingLoaderRuntime) == "table"
+and existingLoaderRuntime.JobId == game.JobId
+and (
+    existingLoaderRuntime.Loading == true
+    or existingLoaderRuntime.Loaded == true
+) then
+
+    warn(
+        "[ZANJI]",
+        "ZANJI is already loading or loaded.",
+        "Channel:",
+        tostring(
+            existingLoaderRuntime.Channel
+            or "unknown"
+        )
+    )
+
+    return
+end
+
+Environment.ZANJI_LOADER_RUNTIME = {
+    JobId = game.JobId,
+    Loading = true,
+    Loaded = false,
+    Channel = "public",
+}
+
+local API =
+    "https://zanji-license-api.ronzz191002.workers.dev"
+
+local PRODUCT =
+    "zanji_v2"
+
+local SOURCE_ROUTE =
+    "/v1/source/zanji_v2"
+
+local VALIDATE_ROUTE =
+    "/v1/license/validate"
+
+local KEY_FILE =
+    "ZanjiHub_Key.txt"
+
+--==================================================
+-- CLEAN
+--==================================================
+
+local function Clean(value)
     return tostring(value or "")
         :gsub("^%s+", "")
         :gsub("%s+$", "")
 end
 
-local function EnsureZanjiFolder()
+--==================================================
+-- REQUEST
+--==================================================
 
-    if makefolder
-    and not isfolder("Zanji") then
+local function GetRequestFunction()
 
-        pcall(function()
-            makefolder("Zanji")
-        end)
+    if type(syn) == "table"
+    and type(syn.request) == "function" then
+
+        return syn.request
     end
+
+    if type(http_request) == "function" then
+        return http_request
+    end
+
+    if type(request) == "function" then
+        return request
+    end
+
+    if type(fluxus) == "table"
+    and type(fluxus.request) == "function" then
+
+        return fluxus.request
+    end
+
+    if type(Environment.request) == "function" then
+        return Environment.request
+    end
+
+    if type(Environment.http_request) == "function" then
+        return Environment.http_request
+    end
+
+    return nil
 end
 
-local function SaveZanjiAccessKey(key)
+local function SendRequest(options)
 
-    key =
-        NormalizeZanjiAccessKey(key)
+    local requestFunction =
+        GetRequestFunction()
 
-    if key == ""
-    or not writefile then
-        return false
+    if type(requestFunction) ~= "function" then
+
+        return nil,
+            "Your executor does not support request/http_request."
     end
 
-    local ok =
-        pcall(function()
-            EnsureZanjiFolder()
+    local ok, response =
+        pcall(
+            requestFunction,
+            options
+        )
 
-            writefile(
-                ZANJI_LOADER_KEY_STATE.SaveFile,
-                key
-            )
-        end)
+    if not ok then
+        return nil, tostring(response)
+    end
 
-    return ok
+    if type(response) == "string" then
+
+        return {
+            Success = true,
+            StatusCode = 200,
+            Body = response,
+        }
+    end
+
+    if type(response) ~= "table" then
+
+        return nil,
+            "Executor returned an invalid HTTP response."
+    end
+
+    local statusCode =
+        tonumber(
+            response.StatusCode
+            or response.Status
+            or response.status_code
+            or response.status
+            or 0
+        ) or 0
+
+    local success =
+        response.Success
+
+    if success == nil then
+
+        success =
+            statusCode >= 200
+            and statusCode < 300
+    end
+
+    return {
+        Success = success == true,
+        StatusCode = statusCode,
+
+        Body =
+            tostring(
+                response.Body
+                or response.body
+                or response.ResponseBody
+                or response.responseBody
+                or ""
+            ),
+    }
 end
 
-local function ReadSavedZanjiAccessKey()
+--==================================================
+-- JSON
+--==================================================
 
-    if not isfile
-    or not readfile then
-        return ""
+local function DecodeJson(body)
+
+    if type(body) ~= "string"
+    or body == "" then
+
+        return nil
     end
-
-    local filePath =
-        ZANJI_LOADER_KEY_STATE.SaveFile
 
     local ok, result =
         pcall(function()
 
-            if not isfile(filePath) then
-                return ""
-            end
-
-            return readfile(filePath)
+            return HttpService:
+                JSONDecode(body)
         end)
+
+    if ok
+    and type(result) == "table" then
+
+        return result
+    end
+
+    return nil
+end
+
+--==================================================
+-- KEY FILE
+--==================================================
+
+local function ReadSavedKey()
+
+    if type(readfile) ~= "function" then
+        return ""
+    end
+
+    local ok, value =
+        pcall(
+            readfile,
+            KEY_FILE
+        )
 
     if not ok then
         return ""
     end
 
-    return NormalizeZanjiAccessKey(result)
+    return Clean(value):upper()
 end
 
-local function ResolveZanjiRequestFunction()
+local function SaveKey(key)
 
-    return
-        (
-            syn
-            and syn.request
-        )
-        or http_request
-        or request
-end
-
-local function DecodeZanjiJson(body)
-
-    if type(body) ~= "string"
-    or body == "" then
-        return nil, "Empty response."
-    end
-
-    local ok, decoded =
-        pcall(function()
-            return HttpService:JSONDecode(body)
-        end)
-
-    if not ok
-    or type(decoded) ~= "table" then
-        return nil, "Invalid JSON response."
-    end
-
-    return decoded, nil
-end
-
---==================================================
--- SERVER AUTH REQUEST
---==================================================
-
-local function UrlEncode(value)
-
-    value =
-        tostring(value or "")
-
-    return value:gsub(
-        "([^%w%-%_%.%~])",
-        function(char)
-            return string.format(
-                "%%%02X",
-                string.byte(char)
-            )
-        end
-    )
-end
-
-local function RequestZanjiKeyAuth(key)
-
-    key =
-        NormalizeZanjiAccessKey(key)
-
-    if key == "" then
-        return false, "Enter a key."
-    end
-
-    local authURL =
-        tostring(ZANJI_LOADER_KEY_STATE.AuthURL or "")
-
-    if authURL == ""
-    or authURL == "PASTE_YOUR_AUTH_WEB_APP_URL_HERE" then
-        return false, "Auth URL is not configured."
-    end
-
-    local params = {
-        "secret=" .. UrlEncode(ZANJI_LOADER_KEY_STATE.Secret),
-        "action=verify",
-        "key=" .. UrlEncode(key),
-        "userId=" .. UrlEncode(LocalPlayer.UserId),
-        "username=" .. UrlEncode(LocalPlayer.Name),
-        "displayName=" .. UrlEncode(LocalPlayer.DisplayName),
-        "placeId=" .. UrlEncode(game.PlaceId),
-        "jobId=" .. UrlEncode(game.JobId),
-        "version=zanji-loader-v2-get",
-    }
-
-    local separator =
-        authURL:find("?", 1, true)
-        and "&"
-        or "?"
-
-    local finalURL =
-        authURL
-        .. separator
-        .. table.concat(params, "&")
-
-    local ok, body =
-        pcall(function()
-            return game:HttpGet(finalURL, true)
-        end)
-
-    if not ok then
-        return false, "Auth GET failed: " .. tostring(body)
-    end
-
-    local decoded, decodeErr =
-        DecodeZanjiJson(body)
-
-    if not decoded then
-        return false, tostring(decodeErr)
-            .. " | Body: "
-            .. tostring(body):sub(1, 150)
-    end
-
-    if decoded.allowed ~= true then
-
-        return false,
-            tostring(
-                decoded.message
-                or decoded.reason
-                or decoded.error
-                or "Access denied."
-            )
-    end
-
-    ZANJI_LOADER_KEY_STATE.LastAuth =
-        decoded
-
-    return true, decoded
-end
-
-local function ValidateZanjiAccessKey(key)
-
-    key =
-        NormalizeZanjiAccessKey(key)
-
-    local allowed, result =
-        RequestZanjiKeyAuth(key)
-
-    if allowed ~= true then
-        return false, tostring(result or "Invalid key.")
-    end
-
-    local auth =
-        result
-
-    local owner =
-        tostring(
-            auth.owner
-            or auth.discord
-            or auth.username
-            or "Premium User"
-        )
-
-    ZANJI_LOADER_KEY_STATE.Accepted =
-        true
-
-    ZANJI_LOADER_KEY_STATE.Owner =
-        owner
-
-    ZANJI_LOADER_KEY_STATE.CurrentKey =
-        key
-
-    ZANJI_LOADER_KEY_STATE.LastAuth =
-        auth
-
-    SaveZanjiAccessKey(key)
-
-    return true, owner
-end
-
---==================================================
--- KEY UI
---==================================================
-
-local function ResolveZanjiUIParent()
-
-    local ok, hui =
-        pcall(function()
-
-            if type(gethui) == "function" then
-                return gethui()
-            end
-
-            return nil
-        end)
-
-    if ok
-    and hui then
-        return hui
-    end
-
-    return LocalPlayer:WaitForChild(
-        "PlayerGui",
-        10
-    )
-end
-
-local function CreateZanjiLoaderKeyUI()
-
-    local parent =
-        ResolveZanjiUIParent()
-
-    if not parent then
-        warn("[ZANJI LOADER] No UI parent")
+    if type(writefile) ~= "function" then
         return false
     end
 
-    local existing =
-        parent:FindFirstChild("ZanjiLoaderKeyUI")
+    local ok =
+        pcall(
+            writefile,
+            KEY_FILE,
+            Clean(key):upper()
+        )
 
-    if existing then
-        existing:Destroy()
+    return ok
+end
+
+--==================================================
+-- API ERROR
+--==================================================
+
+local function FormatApiError(
+    decoded,
+    fallback
+)
+
+    if type(decoded) ~= "table" then
+
+        return tostring(
+            fallback
+            or "Unknown API error."
+        )
     end
 
-    local screenGui =
-        Instance.new("ScreenGui")
+    local messages = {
 
-    screenGui.Name =
-        "ZanjiLoaderKeyUI"
+        invalid_key =
+            "The ZANJI key is invalid.",
 
-    screenGui.ResetOnSpawn =
-        false
+        key_not_found =
+            "The ZANJI key is invalid.",
 
-    screenGui.IgnoreGuiInset =
+        missing_key =
+            "Enter your ZANJI key.",
+
+        license_expired =
+            "This ZANJI key has expired.",
+
+        license_revoked =
+            "This ZANJI key has been revoked.",
+
+        license_paused =
+            "This ZANJI key is paused.",
+
+        license_not_found =
+            "This ZANJI license no longer exists.",
+
+        account_limit_reached =
+            "This key has no Roblox account slots remaining.",
+
+        account_not_linked =
+            "This Roblox account is not linked to this key.",
+
+        product_not_allowed =
+            "This key cannot access ZanjiHub.",
+
+        invalid_access_token =
+            "The temporary access token was rejected.",
+
+        access_token_expired =
+            "The temporary access token expired.",
+
+        unsupported_place =
+            "ZANJI does not support this Roblox experience.",
+
+        source_not_configured =
+            "The private ZANJI source is not configured.",
+
+        source_fetch_failed =
+            "The private ZANJI source could not be downloaded.",
+
+        internal_server_error =
+            "The ZANJI license service had a server error.",
+    }
+
+    local code =
+        Clean(
+            decoded.error
+            or decoded.code
+        ):lower()
+
+    return
+        messages[code]
+        or Clean(decoded.message)
+        or code
+        or tostring(
+            fallback
+            or "Unknown API error."
+        )
+end
+
+--==================================================
+-- ACTIVATE KEY
+--==================================================
+
+local function ActivateKey(key)
+
+    key =
+        Clean(key):upper()
+
+    if key == "" then
+
+        return nil,
+            "Enter your ZANJI Premium key."
+    end
+
+    local body =
+        HttpService:JSONEncode({
+
+            Key = key,
+
+            Product = PRODUCT,
+
+            RobloxUserId =
+                tonumber(
+                    LocalPlayer.UserId
+                ) or 0,
+
+            RobloxUsername =
+                tostring(
+                    LocalPlayer.Name
+                ),
+
+            PlaceId =
+                tostring(
+                    game.PlaceId
+                ),
+
+            UniverseId =
+                tostring(
+                    game.GameId
+                ),
+        })
+
+    local response, requestError =
+        SendRequest({
+
+            Url =
+                API
+                .. "/v1/license/activate",
+
+            Method = "POST",
+
+            Headers = {
+
+                ["Content-Type"] =
+                    "application/json",
+
+                ["Accept"] =
+                    "application/json",
+
+                ["Accept-Encoding"] =
+                    "identity",
+
+                ["Cache-Control"] =
+                    "no-cache",
+            },
+
+            Body = body,
+        })
+
+    if not response then
+
+        return nil,
+            "Activation request failed: "
+            .. tostring(requestError)
+    end
+
+    local decoded =
+        DecodeJson(
+            response.Body
+        )
+
+    if not response.Success
+    or type(decoded) ~= "table"
+    or decoded.ok ~= true then
+
+        return nil,
+            FormatApiError(
+                decoded,
+
+                "Activation failed with HTTP "
+                .. tostring(
+                    response.StatusCode
+                )
+            )
+    end
+
+    local token =
+        Clean(
+            decoded.accessToken
+            or decoded.access_token
+            or decoded.token
+        )
+
+    if token == "" then
+
+        return nil,
+            "The API did not return an access token."
+    end
+
+    return {
+        Token = token,
+        Activation = decoded,
+    }
+end
+
+--==================================================
+-- DOWNLOAD SOURCE
+--==================================================
+
+local function DownloadSource(session)
+
+    local response, requestError =
+        SendRequest({
+
+            Url =
+                API
+                .. SOURCE_ROUTE,
+
+            Method = "GET",
+
+            Headers = {
+
+                ["Authorization"] =
+                    "Bearer "
+                    .. tostring(
+                        session.Token
+                    ),
+
+                ["Accept"] =
+                    "text/plain",
+
+                ["Accept-Encoding"] =
+                    "identity",
+
+                ["Cache-Control"] =
+                    "no-cache",
+            },
+        })
+
+    if not response then
+
+        return nil,
+            "Source request failed: "
+            .. tostring(requestError)
+    end
+
+    if not response.Success then
+
+        return nil,
+            FormatApiError(
+                DecodeJson(
+                    response.Body
+                ),
+
+                "Source request failed with HTTP "
+                .. tostring(
+                    response.StatusCode
+                )
+            )
+    end
+
+    local source =
+        tostring(
+            response.Body
+            or ""
+        )
+
+    if source == "" then
+
+        return nil,
+            "The private source was empty."
+    end
+
+    local marker =
+        "-- ZANJI PRIVATE SOURCE"
+
+    if source:sub(
+        1,
+        #marker
+    ) ~= marker then
+
+        return nil,
+            "The private source marker is missing."
+    end
+
+    local endMarker =
+        "-- ZANJI_PRIVATE_END_MARKER"
+
+    if source:find(
+        endMarker,
+        1,
+        true
+    ) == nil then
+
+        return nil,
+            "The private source is incomplete."
+    end
+
+    return source
+end
+
+--==================================================
+-- INSTALL AUTH
+--==================================================
+
+local function InstallAuth(session)
+
+    local activation =
+        session.Activation
+        or {}
+
+    local features = {}
+
+    if type(
+        activation.features
+    ) == "table" then
+
+        for name, enabled
+        in pairs(
+            activation.features
+        ) do
+
+            features[name] =
+                enabled == true
+        end
+    end
+
+    Environment.ZANJI_LOADER_AUTHORIZED =
         true
 
-    screenGui.DisplayOrder =
-        100000
+    Environment.ZANJI_LOADER_OWNER =
+        tostring(
+            activation.owner
+            or "License"
+        )
 
-    screenGui.Parent =
-        parent
+    Environment.ZANJI_LOADER_PLAN =
+        tostring(
+            activation.role
+            or "premium"
+        )
 
-    local dim =
-        Instance.new("Frame")
+    Environment.ZANJI_LOADER_EXPIRES_AT =
+        tonumber(
+            activation.expiresAt
+            or 0
+        ) or 0
 
-    dim.Name =
-        "Dim"
+    Environment.ZANJI_LOADER_MAX_ACCOUNTS =
+        tonumber(
+            activation.maxAccounts
+            or 1
+        ) or 1
 
-    dim.BackgroundColor3 =
-        Color3.fromRGB(0, 0, 0)
+    Environment.ZANJI_LOADER_SLOTS_USED =
+        tonumber(
+            activation.accountsUsed
+            or 1
+        ) or 1
 
-    dim.BackgroundTransparency =
-        0.35
+    Environment.ZANJI_LOADER_FEATURES =
+        features
 
-    dim.Size =
-        UDim2.fromScale(1, 1)
+    local authSession = {
+        Token =
+            tostring(
+                session.Token
+                or ""
+            ),
 
-    dim.Parent =
-        screenGui
+        API =
+            API,
 
-    local frame =
-        Instance.new("Frame")
+        ValidateRoute =
+            VALIDATE_ROUTE,
 
-    frame.Name =
-        "Main"
+        Product =
+            PRODUCT,
 
-    frame.AnchorPoint =
-        Vector2.new(0.5, 0.5)
+        RobloxUserId =
+            tonumber(
+                LocalPlayer.UserId
+            ) or 0,
 
-    frame.Position =
-        UDim2.fromScale(0.5, 0.5)
+        JobId =
+            tostring(
+                game.JobId
+            ),
 
-    frame.Size =
-        UDim2.fromOffset(350, 225)
+        Valid =
+            true,
 
-    frame.BackgroundColor3 =
-        Color3.fromRGB(12, 12, 18)
+        LeaseSeconds =
+            tonumber(
+                activation.leaseSeconds
+                or 180
+            ) or 180,
 
-    frame.BorderSizePixel =
-        0
+        LastValidatedAt =
+            os.time(),
+    }
 
-    frame.Parent =
-        dim
+    Environment.ZANJI_AUTH_SESSION =
+        authSession
+
+    _G.ZANJI_AUTH_SESSION =
+        authSession
+
+    _G.ZANJI_LOADER_AUTHORIZED =
+        true
+
+    _G.ZANJI_LOADER_OWNER =
+        Environment.ZANJI_LOADER_OWNER
+
+    _G.ZANJI_LOADER_PLAN =
+        Environment.ZANJI_LOADER_PLAN
+
+    _G.ZANJI_LOADER_EXPIRES_AT =
+        Environment.ZANJI_LOADER_EXPIRES_AT
+
+    _G.ZANJI_LOADER_MAX_ACCOUNTS =
+        Environment.ZANJI_LOADER_MAX_ACCOUNTS
+
+    _G.ZANJI_LOADER_SLOTS_USED =
+        Environment.ZANJI_LOADER_SLOTS_USED
+
+    _G.ZANJI_LOADER_FEATURES =
+        features
+end
+
+local function ClearAuth()
+
+    Environment.ZANJI_LOADER_AUTHORIZED =
+        false
+
+    _G.ZANJI_LOADER_AUTHORIZED =
+        false
+
+    local authSession =
+        Environment.ZANJI_AUTH_SESSION
+        or _G.ZANJI_AUTH_SESSION
+
+    if type(authSession) == "table" then
+
+        authSession.Valid =
+            false
+
+        authSession.Token =
+            nil
+    end
+
+    Environment.ZANJI_AUTH_SESSION =
+        nil
+
+    _G.ZANJI_AUTH_SESSION =
+        nil
+end
+
+--==================================================
+-- COMPILE / RUN
+--==================================================
+
+local function CompileAndRun(source)
+
+    local compiler =
+        loadstring
+        or load
+
+    if type(compiler) ~= "function" then
+
+        return false,
+            "loadstring/load is unavailable."
+    end
+
+    local ok, chunk, compileError =
+        pcall(
+            compiler,
+            source
+        )
+
+    if not ok
+    or type(chunk) ~= "function" then
+
+        return false,
+            "Compile failed: "
+            .. tostring(
+                compileError
+                or chunk
+            )
+    end
+
+    local runOk, runError =
+        pcall(chunk)
+
+    if not runOk then
+
+        return false,
+            "Runtime failed: "
+            .. tostring(
+                runError
+            )
+    end
+
+    return true
+end
+
+--==================================================
+-- RUN WITH KEY
+--==================================================
+
+local function RunWithKey(key)
+
+    local session, activationError =
+        ActivateKey(key)
+
+    if not session then
+
+        return false,
+            activationError
+    end
+
+    local source, sourceError =
+        DownloadSource(session)
+
+    if not source then
+
+        session.Token =
+            nil
+
+        return false,
+            sourceError
+    end
+
+    InstallAuth(session)
+
+    -- The private source receives a short-lived rolling
+    -- lease through ZANJI_AUTH_SESSION. The local activation
+    -- table itself does not keep another token copy.
+    session.Token =
+        nil
+
+    SaveKey(key)
+
+    local success, errorMessage =
+        CompileAndRun(source)
+
+    if success then
+
+        Environment.ZANJI_LOADER_RUNTIME = {
+            JobId = game.JobId,
+            Loading = false,
+            Loaded = true,
+            Channel = "public",
+        }
+
+    else
+
+        ClearAuth()
+
+        -- Allow retry if loading failed.
+        Environment.ZANJI_LOADER_RUNTIME = {
+            JobId = game.JobId,
+            Loading = false,
+            Loaded = false,
+            Channel = "public",
+        }
+    end
+
+    return success, errorMessage
+end
+
+--==================================================
+-- UI PARENT
+--==================================================
+
+local function GetUiParent()
+
+    if type(gethui) == "function" then
+
+        local ok, result =
+            pcall(gethui)
+
+        if ok
+        and typeof(result) == "Instance" then
+
+            return result
+        end
+    end
+
+    if typeof(CoreGui) == "Instance" then
+        return CoreGui
+    end
+
+    return LocalPlayer:
+        WaitForChild(
+            "PlayerGui"
+        )
+end
+
+--==================================================
+-- UI CORNER
+--==================================================
+
+local ZANJI_UI = {
+    Background = Color3.fromRGB(5, 9, 15),
+    Surface = Color3.fromRGB(8, 14, 23),
+    Field = Color3.fromRGB(10, 18, 29),
+    Border = Color3.fromRGB(38, 56, 77),
+    Accent = Color3.fromRGB(39, 140, 255),
+    AccentHover = Color3.fromRGB(62, 154, 255),
+    Text = Color3.fromRGB(232, 237, 245),
+    Muted = Color3.fromRGB(135, 147, 163),
+}
+
+local function AddCorner(
+    instance,
+    radius
+)
 
     local corner =
-        Instance.new("UICorner")
+        Instance.new(
+            "UICorner"
+        )
 
     corner.CornerRadius =
-        UDim.new(0, 8)
+        UDim.new(
+            0,
+            radius
+        )
 
     corner.Parent =
-        frame
+        instance
+end
 
-    local stroke =
-        Instance.new("UIStroke")
+local function AddStroke(
+    instance,
+    color,
+    thickness,
+    transparency
+)
+    local stroke = Instance.new("UIStroke")
+    stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    stroke.Color = color or ZANJI_UI.Border
+    stroke.Thickness = thickness or 1
+    stroke.Transparency = transparency or 0
+    stroke.Parent = instance
+    return stroke
+end
 
-    stroke.Color =
-        Color3.fromRGB(110, 80, 180)
+--==================================================
+-- KEY WINDOW
+--==================================================
 
-    stroke.Thickness =
-        1
+local function CreateKeyWindow(
+    initialKey,
+    initialMessage
+)
 
-    stroke.Transparency =
-        0.1
+    local parent =
+        GetUiParent()
 
-    stroke.Parent =
-        frame
+    local old =
+        parent:FindFirstChild(
+            "ZANJI_Public_Key_UI"
+        )
+
+    if old then
+        old:Destroy()
+    end
+
+    local gui =
+        Instance.new(
+            "ScreenGui"
+        )
+
+    gui.Name =
+        "ZANJI_Public_Key_UI"
+
+    gui.IgnoreGuiInset = true
+    gui.ResetOnSpawn = false
+    gui.DisplayOrder = 999999
+
+    gui.Parent =
+        parent
+
+    --==================================================
+    -- WINDOW
+    --==================================================
+
+    local window =
+        Instance.new(
+            "Frame"
+        )
+
+    window.AnchorPoint =
+        Vector2.new(
+            0.5,
+            0.5
+        )
+
+    window.Position =
+        UDim2.fromScale(
+            0.5,
+            0.5
+        )
+
+    window.Size =
+        UDim2.fromOffset(
+            470,
+            275
+        )
+
+    window.BackgroundColor3 =
+        ZANJI_UI.Surface
+
+    window.BorderSizePixel = 0
+    window.Active = true
+    window.Draggable = true
+    window.ClipsDescendants = true
+
+    window.Parent =
+        gui
+
+    AddCorner(
+        window,
+        9
+    )
+
+    AddStroke(window, ZANJI_UI.Border, 1, 0.05)
+
+    local header = Instance.new("Frame")
+    header.Name = "Header"
+    header.Size = UDim2.new(1, 0, 0, 68)
+    header.BackgroundColor3 = ZANJI_UI.Background
+    header.BorderSizePixel = 0
+    header.Parent = window
+
+    local headerDivider = Instance.new("Frame")
+    headerDivider.Name = "Divider"
+    headerDivider.Position = UDim2.new(0, 0, 1, -1)
+    headerDivider.Size = UDim2.new(1, 0, 0, 1)
+    headerDivider.BackgroundColor3 = ZANJI_UI.Border
+    headerDivider.BorderSizePixel = 0
+    headerDivider.Parent = header
+
+    local accent = Instance.new("Frame")
+    accent.Name = "Accent"
+    accent.Position = UDim2.fromOffset(18, 20)
+    accent.Size = UDim2.fromOffset(3, 27)
+    accent.BackgroundColor3 = ZANJI_UI.Accent
+    accent.BorderSizePixel = 0
+    accent.Parent = header
+    AddCorner(accent, 2)
+
+    local secureLabel = Instance.new("TextLabel")
+    secureLabel.Name = "SecureLabel"
+    secureLabel.AnchorPoint = Vector2.new(1, 0.5)
+    secureLabel.Position = UDim2.new(1, -20, 0.5, 0)
+    secureLabel.Size = UDim2.fromOffset(112, 26)
+    secureLabel.BackgroundColor3 = ZANJI_UI.Field
+    secureLabel.BorderSizePixel = 0
+    secureLabel.Font = Enum.Font.GothamMedium
+    secureLabel.Text = "SECURE ACCESS"
+    secureLabel.TextColor3 = ZANJI_UI.Accent
+    secureLabel.TextSize = 11
+    secureLabel.Parent = header
+    AddCorner(secureLabel, 5)
+    AddStroke(secureLabel, ZANJI_UI.Border, 1, 0.15)
+
+    --==================================================
+    -- TITLE
+    --==================================================
 
     local title =
-        Instance.new("TextLabel")
-
-    title.Name =
-        "Title"
-
-    title.BackgroundTransparency =
-        1
+        Instance.new(
+            "TextLabel"
+        )
 
     title.Position =
-        UDim2.fromOffset(0, 15)
+        UDim2.fromOffset(
+            31,
+            13
+        )
 
     title.Size =
-        UDim2.new(1, 0, 0, 30)
+        UDim2.new(
+            1,
+            -170,
+            0,
+            24
+        )
+
+    title.BackgroundTransparency = 1
 
     title.Font =
-        Enum.Font.GothamBlack
+        Enum.Font.GothamBold
 
     title.Text =
-        "ZANJI"
+        "ZANJIHUB PREMIUM ACCESS"
 
     title.TextColor3 =
-        Color3.fromRGB(255, 235, 170)
+        ZANJI_UI.Text
 
-    title.TextSize =
-        23
+    title.TextSize = 18
 
-    title.TextStrokeTransparency =
-        0.65
+    title.TextXAlignment =
+        Enum.TextXAlignment.Left
 
     title.Parent =
-        frame
+        header
+
+    local titleHint = Instance.new("TextLabel")
+    titleHint.Position = UDim2.fromOffset(31, 37)
+    titleHint.Size = UDim2.new(1, -190, 0, 17)
+    titleHint.BackgroundTransparency = 1
+    titleHint.Font = Enum.Font.Gotham
+    titleHint.Text = "License authentication"
+    titleHint.TextColor3 = ZANJI_UI.Muted
+    titleHint.TextSize = 11
+    titleHint.TextXAlignment = Enum.TextXAlignment.Left
+    titleHint.Parent = header
+
+    --==================================================
+    -- SUBTITLE
+    --==================================================
 
     local subtitle =
-        Instance.new("TextLabel")
-
-    subtitle.Name =
-        "Subtitle"
-
-    subtitle.BackgroundTransparency =
-        1
+        Instance.new(
+            "TextLabel"
+        )
 
     subtitle.Position =
-        UDim2.fromOffset(0, 46)
+        UDim2.fromOffset(
+            24,
+            80
+        )
 
     subtitle.Size =
-        UDim2.new(1, 0, 0, 22)
+        UDim2.new(
+            1,
+            -48,
+            0,
+            32
+        )
+
+    subtitle.BackgroundTransparency = 1
 
     subtitle.Font =
         Enum.Font.Gotham
 
     subtitle.Text =
-        "Enter your access key"
+        "Enter your ZANJI key. A valid key is saved automatically."
 
     subtitle.TextColor3 =
-        Color3.fromRGB(195, 190, 215)
+        ZANJI_UI.Muted
 
-    subtitle.TextSize =
-        13
+    subtitle.TextSize = 13
+
+    subtitle.TextWrapped = true
+
+    subtitle.TextXAlignment =
+        Enum.TextXAlignment.Left
 
     subtitle.Parent =
-        frame
+        window
 
-    local input =
-        Instance.new("TextBox")
+    --==================================================
+    -- KEY BOX
+    --==================================================
 
-    input.Name =
-        "KeyInput"
+    local keyBox =
+        Instance.new(
+            "TextBox"
+        )
 
-    input.Position =
-        UDim2.fromOffset(30, 84)
+    keyBox.Position =
+        UDim2.fromOffset(
+            24,
+            116
+        )
 
-    input.Size =
-        UDim2.new(1, -60, 0, 36)
+    keyBox.Size =
+        UDim2.new(
+            1,
+            -48,
+            0,
+            44
+        )
 
-    input.BackgroundColor3 =
-        Color3.fromRGB(22, 22, 32)
+    keyBox.BackgroundColor3 =
+        ZANJI_UI.Field
 
-    input.BorderSizePixel =
-        0
+    keyBox.BorderSizePixel = 0
 
-    input.ClearTextOnFocus =
-        false
+    keyBox.ClearTextOnFocus = false
 
-    input.Font =
-        Enum.Font.Gotham
+    keyBox.Font =
+        Enum.Font.Code
 
-    input.PlaceholderText =
-        "ZANJI-XXXX-XXXX"
+    keyBox.PlaceholderText =
+        "ZANJI-XXXX-XXXX-XXXX"
 
-    input.PlaceholderColor3 =
-        Color3.fromRGB(110, 110, 130)
+    keyBox.PlaceholderColor3 =
+        ZANJI_UI.Muted
 
-    input.Text =
-        ReadSavedZanjiAccessKey()
+    keyBox.Text =
+        Clean(
+            initialKey
+        ):upper()
 
-    input.TextColor3 =
-        Color3.fromRGB(240, 240, 255)
+    keyBox.TextColor3 =
+        ZANJI_UI.Text
 
-    input.TextSize =
-        14
+    keyBox.TextSize = 15
 
-    input.Parent =
-        frame
+    keyBox.Parent =
+        window
 
-    local inputCorner =
-        Instance.new("UICorner")
+    AddCorner(
+        keyBox,
+        6
+    )
 
-    inputCorner.CornerRadius =
-        UDim.new(0, 6)
+    local keyBoxStroke = AddStroke(keyBox, ZANJI_UI.Border, 1, 0.05)
 
-    inputCorner.Parent =
-        input
+    keyBox.Focused:Connect(function()
+        keyBoxStroke.Color = ZANJI_UI.Accent
+        keyBoxStroke.Transparency = 0
+    end)
 
-    local inputStroke =
-        Instance.new("UIStroke")
+    keyBox.FocusLost:Connect(function()
+        keyBoxStroke.Color = ZANJI_UI.Border
+        keyBoxStroke.Transparency = 0.05
+    end)
 
-    inputStroke.Color =
-        Color3.fromRGB(65, 55, 95)
+    --==================================================
+    -- BUTTON
+    --==================================================
 
-    inputStroke.Thickness =
-        1
+    local button =
+        Instance.new(
+            "TextButton"
+        )
 
-    inputStroke.Parent =
-        input
+    button.Position =
+        UDim2.fromOffset(
+            24,
+            172
+        )
+
+    button.Size =
+        UDim2.new(
+            1,
+            -48,
+            0,
+            42
+        )
+
+    button.BackgroundColor3 =
+        ZANJI_UI.Accent
+
+    button.BorderSizePixel = 0
+
+    button.Font =
+        Enum.Font.GothamBold
+
+    button.Text =
+        "ACTIVATE ZANJI KEY"
+
+    button.TextColor3 =
+        Color3.fromRGB(
+            255,
+            255,
+            255
+        )
+
+    button.TextSize = 14
+
+    button.Parent =
+        window
+
+    AddCorner(
+        button,
+        6
+    )
+
+    AddStroke(button, Color3.fromRGB(94, 176, 255), 1, 0.35)
+
+    button.MouseEnter:Connect(function()
+        if button.Active then
+            button.BackgroundColor3 = ZANJI_UI.AccentHover
+        end
+    end)
+
+    button.MouseLeave:Connect(function()
+        button.BackgroundColor3 = ZANJI_UI.Accent
+    end)
+
+    --==================================================
+    -- STATUS
+    --==================================================
 
     local status =
-        Instance.new("TextLabel")
-
-    status.Name =
-        "Status"
-
-    status.BackgroundTransparency =
-        1
+        Instance.new(
+            "TextLabel"
+        )
 
     status.Position =
-        UDim2.fromOffset(30, 126)
+        UDim2.fromOffset(
+            24,
+            225
+        )
 
     status.Size =
-        UDim2.new(1, -60, 0, 34)
+        UDim2.new(
+            1,
+            -48,
+            0,
+            24
+        )
+
+    status.BackgroundTransparency = 1
 
     status.Font =
         Enum.Font.Gotham
 
     status.Text =
-        ""
+        tostring(
+            initialMessage
+            or ""
+        )
 
     status.TextColor3 =
-        Color3.fromRGB(255, 95, 120)
+        ZANJI_UI.Muted
 
-    status.TextSize =
-        12
+    status.TextSize = 12
 
-    status.TextWrapped =
-        true
+    status.TextTruncate =
+        Enum.TextTruncate.AtEnd
 
     status.TextXAlignment =
         Enum.TextXAlignment.Left
 
-    status.TextYAlignment =
-        Enum.TextYAlignment.Top
-
     status.Parent =
-        frame
+        window
 
-    local verify =
-        Instance.new("TextButton")
+    --==================================================
+    -- SUBMIT
+    --==================================================
 
-    verify.Name =
-        "Verify"
+    local busy = false
 
-    verify.Position =
-        UDim2.fromOffset(30, 170)
+    local function submit()
 
-    verify.Size =
-        UDim2.new(0.5, -35, 0, 34)
-
-    verify.BackgroundColor3 =
-        Color3.fromRGB(75, 45, 135)
-
-    verify.BorderSizePixel =
-        0
-
-    verify.AutoButtonColor =
-        true
-
-    verify.Font =
-        Enum.Font.GothamBold
-
-    verify.Text =
-        "Verify"
-
-    verify.TextColor3 =
-        Color3.fromRGB(255, 255, 255)
-
-    verify.TextSize =
-        14
-
-    verify.Parent =
-        frame
-
-    local verifyCorner =
-        Instance.new("UICorner")
-
-    verifyCorner.CornerRadius =
-        UDim.new(0, 6)
-
-    verifyCorner.Parent =
-        verify
-
-    local close =
-        Instance.new("TextButton")
-
-    close.Name =
-        "Close"
-
-    close.Position =
-        UDim2.new(0.5, 5, 0, 170)
-
-    close.Size =
-        UDim2.new(0.5, -35, 0, 34)
-
-    close.BackgroundColor3 =
-        Color3.fromRGB(20, 20, 28)
-
-    close.BorderSizePixel =
-        0
-
-    close.AutoButtonColor =
-        true
-
-    close.Font =
-        Enum.Font.GothamBold
-
-    close.Text =
-        "Close UI"
-
-    close.TextColor3 =
-        Color3.fromRGB(185, 185, 205)
-
-    close.TextSize =
-        14
-
-    close.Parent =
-        frame
-
-    local closeCorner =
-        Instance.new("UICorner")
-
-    closeCorner.CornerRadius =
-        UDim.new(0, 6)
-
-    closeCorner.Parent =
-        close
-
-    local finished =
-        false
-
-    local accepted =
-        false
-
-    local verifying =
-        false
-
-    local function TryVerify()
-
-        if verifying then
+        if busy then
             return
         end
 
-        verifying =
-            true
+        local key =
+            Clean(
+                keyBox.Text
+            ):upper()
 
-        verify.Text =
-            "Checking..."
-
-        status.Text =
-            "Checking key..."
-
-        status.TextColor3 =
-            Color3.fromRGB(235, 215, 120)
-
-        local ok, result =
-            ValidateZanjiAccessKey(
-                input.Text
-            )
-
-        if ok then
-
-            local auth =
-                ZANJI_LOADER_KEY_STATE.LastAuth
-                or {}
-
-            local slotsText =
-                tostring(auth.slotsUsed or "?")
-                .. "/"
-                .. tostring(auth.maxAccounts or "?")
+        if key == "" then
 
             status.Text =
-                "Access granted • "
-                .. tostring(result)
-                .. " • "
-                .. tostring(auth.plan or "premium")
-                .. " • "
-                .. slotsText
-                .. " slots"
-
-            status.TextColor3 =
-                Color3.fromRGB(90, 255, 150)
-
-            accepted =
-                true
-
-            task.wait(0.35)
-
-            finished =
-                true
-
-            screenGui:Destroy()
+                "Enter your ZANJI key."
 
             return
         end
 
+        busy = true
+
+        button.Active = false
+
+        button.Text =
+            "AUTHENTICATING..."
+
         status.Text =
-            tostring(result or "Invalid key.")
+            "Checking license..."
 
-        status.TextColor3 =
-            Color3.fromRGB(255, 95, 120)
+        task.spawn(function()
 
-        verify.Text =
-            "Verify"
+            local success, err =
+                RunWithKey(key)
 
-        verifying =
-            false
+            if success then
+
+                status.Text =
+                    "Authenticated. Loading ZANJI..."
+
+                task.wait(0.1)
+
+                gui:Destroy()
+
+                return
+            end
+
+            busy = false
+
+            button.Active = true
+
+            button.Text =
+                "ACTIVATE ZANJI KEY"
+
+            status.Text =
+                tostring(err)
+
+            warn(
+                "[ZANJI]",
+                tostring(err)
+            )
+        end)
     end
 
-    verify.MouseButton1Click:Connect(TryVerify)
+    button.MouseButton1Click:Connect(
+        submit
+    )
 
-    input.FocusLost:Connect(function(enterPressed)
+    keyBox.FocusLost:Connect(
+        function(enterPressed)
 
-        if enterPressed then
-            TryVerify()
+            if enterPressed then
+                submit()
+            end
         end
-    end)
-
-    close.MouseButton1Click:Connect(function()
-
-        finished =
-            true
-
-        accepted =
-            false
-
-        screenGui:Destroy()
-    end)
-
-    input:CaptureFocus()
-
-    while not finished do
-        task.wait(0.05)
-    end
-
-    return accepted
+    )
 end
 
 --==================================================
--- KEY GATE
+-- START
 --==================================================
 
-local function RunZanjiLoaderKeyGate()
+local savedKey =
+    ReadSavedKey()
 
-    if ZANJI_LOADER_KEY_STATE.Enabled ~= true then
-        return true
+if savedKey ~= "" then
+
+    local success, err =
+        RunWithKey(
+            savedKey
+        )
+
+    if success then
+        return
     end
 
-    local savedKey =
-        ReadSavedZanjiAccessKey()
+    warn(
+        "[ZANJI] Saved key failed:",
+        tostring(err)
+    )
 
-    if savedKey ~= "" then
+    CreateKeyWindow(
+        savedKey,
+        tostring(err)
+    )
 
-        local valid, owner =
-            ValidateZanjiAccessKey(
-                savedKey
-            )
-
-        if valid then
-
-            local auth =
-                ZANJI_LOADER_KEY_STATE.LastAuth
-                or {}
-
-            print(
-                "[ZANJI LOADER] Saved key accepted:",
-                tostring(owner),
-                "| Plan:",
-                tostring(auth.plan or "unknown"),
-                "| Slots:",
-                tostring(auth.slotsUsed or "?")
-                    .. "/"
-                    .. tostring(auth.maxAccounts or "?")
-            )
-
-            return true
-        end
-    end
-
-    return CreateZanjiLoaderKeyUI()
-end
-
-if not RunZanjiLoaderKeyGate() then
-    warn("[ZANJI LOADER] Access denied. Loader stopped.")
     return
 end
 
---==================================================
--- EXPORT AUTH TO MAIN SCRIPT
---==================================================
-
-local root =
-    type(getgenv) == "function"
-    and getgenv()
-    or _G
-
-local auth =
-    ZANJI_LOADER_KEY_STATE.LastAuth
-    or {}
-
-root.ZANJI_LOADER_AUTHORIZED =
-    true
-
-root.ZANJI_LOADER_OWNER =
-    ZANJI_LOADER_KEY_STATE.Owner
-
-root.ZANJI_LOADER_KEY =
-    ZANJI_LOADER_KEY_STATE.CurrentKey
-
-root.ZANJI_LOADER_PLAN =
-    tostring(auth.plan or "premium_30d")
-
-root.ZANJI_LOADER_EXPIRES_AT =
-    tonumber(auth.expiresAt) or 0
-
-root.ZANJI_LOADER_MAX_ACCOUNTS =
-    tonumber(auth.maxAccounts) or 1
-
-root.ZANJI_LOADER_SLOTS_USED =
-    tonumber(auth.slotsUsed) or 1
-
-root.ZANJI_LOADER_FEATURES =
-    type(auth.features) == "table"
-    and auth.features
-    or {
-        sniper = true,
-        marketTracker = true,
-        ageBreaker = true,
-        webhooks = true,
-        boothTools = true,
-    }
-
-print(
-    "[ZANJI LOADER] Access granted:",
-    tostring(ZANJI_LOADER_KEY_STATE.Owner),
-    "| Plan:",
-    tostring(root.ZANJI_LOADER_PLAN),
-    "| Slots:",
-    tostring(root.ZANJI_LOADER_SLOTS_USED)
-        .. "/"
-        .. tostring(root.ZANJI_LOADER_MAX_ACCOUNTS)
+CreateKeyWindow(
+    "",
+    "Paste your ZANJI Premium key to continue."
 )
-
---==================================================
--- ZANJI USAGE TRACKER
--- Tracks validated loader users through Google Apps Script.
---==================================================
-
-local ZANJI_USAGE_TRACKER = {
-    Enabled = true,
-
-    URL = "https://script.google.com/macros/s/AKfycbzn7MwnnbJAakW0HjJ6PE89Ue_jw9F2CDyoqI1xgKuw9ycV-hGNksxtzOAU9Q8Zf8JKTQ/exec",
-
-    -- Must match the SECRET in your usage tracker Apps Script.
-    Secret = "zanjilangmalakas",
-
-    Version = "v3.4.5",
-
-    SessionId =
-        tostring(game.PlaceId)
-        .. "_"
-        .. tostring(game.JobId)
-        .. "_"
-        .. tostring(LocalPlayer.UserId)
-        .. "_"
-        .. tostring(os.time())
-        .. "_"
-        .. tostring(math.random(100000, 999999)),
-
-    HeartbeatInterval = 45,
-}
-
-local function SendZanjiUsageHeartbeat(action)
-
-    if ZANJI_USAGE_TRACKER.Enabled ~= true then
-        return false
-    end
-
-    local url =
-        tostring(ZANJI_USAGE_TRACKER.URL or "")
-
-    if url == ""
-    or url == "PASTE_YOUR_WEB_APP_URL_HERE" then
-
-        warn("[ZANJI TRACKER] Missing tracker URL")
-
-        return false
-    end
-
-    local requestFunction =
-        ResolveZanjiRequestFunction()
-
-    if type(requestFunction) ~= "function" then
-
-        warn("[ZANJI TRACKER] No HTTP request function found")
-
-        return false
-    end
-
-    local payload = {
-        secret =
-            tostring(ZANJI_USAGE_TRACKER.Secret),
-
-        action =
-            tostring(action or "heartbeat"),
-
-        sessionId =
-            tostring(ZANJI_USAGE_TRACKER.SessionId),
-
-        userId =
-            tostring(LocalPlayer.UserId),
-
-        username =
-            tostring(LocalPlayer.Name),
-
-        displayName =
-            tostring(LocalPlayer.DisplayName),
-
-        owner =
-            tostring(ZANJI_LOADER_KEY_STATE.Owner or "Unknown"),
-
-        key =
-            tostring(ZANJI_LOADER_KEY_STATE.CurrentKey or ""),
-
-        plan =
-            tostring(root.ZANJI_LOADER_PLAN or "unknown"),
-
-        slotsUsed =
-            tostring(root.ZANJI_LOADER_SLOTS_USED or ""),
-
-        maxAccounts =
-            tostring(root.ZANJI_LOADER_MAX_ACCOUNTS or ""),
-
-        version =
-            tostring(ZANJI_USAGE_TRACKER.Version),
-
-        placeId =
-            tostring(game.PlaceId),
-
-        jobId =
-            tostring(game.JobId),
-    }
-
-    local encoded =
-        HttpService:JSONEncode(payload)
-
-    local ok, result =
-        pcall(function()
-
-            return requestFunction({
-                Url = url,
-                Method = "POST",
-                Headers = {
-                    ["Content-Type"] = "application/json",
-                },
-                Body = encoded,
-            })
-        end)
-
-    if not ok then
-
-        warn(
-            "[ZANJI TRACKER] Heartbeat failed:",
-            tostring(result)
-        )
-
-        return false
-    end
-
-    local statusCode =
-        result
-        and (
-            result.StatusCode
-            or result.status_code
-            or result.Status
-        )
-
-    local body =
-        result
-        and (
-            result.Body
-            or result.body
-            or result.ResponseBody
-        )
-
-    print(
-        "[ZANJI TRACKER] Sent:",
-        tostring(action or "heartbeat"),
-        "| Status:",
-        tostring(statusCode or "unknown"),
-        "| Body:",
-        tostring(body or "no body")
-    )
-
-    return true
-end
-
-local function StartZanjiUsageTracker()
-
-    task.spawn(function()
-
-        task.wait(2)
-
-        SendZanjiUsageHeartbeat("start")
-
-        while true do
-
-            task.wait(
-                math.max(
-                    15,
-                    tonumber(ZANJI_USAGE_TRACKER.HeartbeatInterval)
-                    or 45
-                )
-            )
-
-            SendZanjiUsageHeartbeat("heartbeat")
-        end
-    end)
-end
-
-StartZanjiUsageTracker()
-
---==================================================
--- FETCH + RUN MAIN SCRIPT
---==================================================
-
-print("[ZANJI LOADER] Fetching:", MAIN_URL)
-
-local ok, source =
-    pcall(function()
-        return game:HttpGet(MAIN_URL, true)
-    end)
-
-if not ok then
-    error("[ZANJI LOADER] HttpGet failed: " .. tostring(source))
-end
-
-if type(source) ~= "string" then
-    error("[ZANJI LOADER] Source is not string: " .. typeof(source))
-end
-
-print("[ZANJI LOADER] Loaded bytes:", #source)
-print("[ZANJI LOADER] First 80 chars:", string.sub(source, 1, 80))
-
-local fn, compileErr =
-    loadstring(source)
-
-if not fn then
-    error("[ZANJI LOADER] Compile failed: " .. tostring(compileErr))
-end
-
-print("[ZANJI LOADER] Compile OK, running...")
-
-local okRun, runtimeErr =
-    xpcall(fn, function(err)
-        return tostring(err) .. "\n" .. debug.traceback()
-    end)
-
-if not okRun then
-    error("[ZANJI LOADER] Runtime failed:\n" .. tostring(runtimeErr))
-end
-
-print("[ZANJI LOADER] Runtime OK")
